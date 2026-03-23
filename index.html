@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>青島老城＆海邊景點地圖導覽</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+    }
+    #map {
+      flex: 2;
+      height: 100%;
+    }
+    #sidebar {
+      flex: 1;
+      max-width: 420px;
+      padding: 16px;
+      overflow-y: auto;
+      border-left: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+    .place {
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .place h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+    .place p {
+      margin: 0;
+      font-size: 13px;
+      color: #555;
+    }
+    .place small {
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="sidebar">
+    <h2>青島老城＆海邊景點導覽</h2>
+    <p>點選右側清單或地圖上的標記，可查看景點照片與背景說明。</p>
+    <div id="place-list"></div>
+  </div>
+
+  <script>
+    // === 1. 景點資料 ===
+    // imageUrl：請換成你想用的網路圖片連結
+    const places = [
+      {
+        id: "indigo",
+        title: "青島英迪格酒店 Hotel Indigo",
+        lat: 36.0665,
+        lng: 120.3205,
+        imageUrl: "https://example.com/indigo-qingdao.jpg",
+        description: "位於青島老城區核心的設計酒店，步行即可到棧橋、天主教堂與中山路老街，是探索老城與海邊的完美基地。"
+      },
+      {
+        id: "zhanqiao",
+        title: "棧橋（回瀾閣）",
+        lat: 36.0613,
+        lng: 120.3200,
+        imageUrl: "https://example.com/zhanqiao.jpg",
+        description: "青島最具代表性的地標之一，也是青島啤酒標誌上的亭閣原型。適合看海、散步與拍攝夕陽與夜景。"
+      },
+      {
+        id: "church",
+        title: "青島天主教堂",
+        lat: 36.0713,
+        lng: 120.3208,
+        imageUrl: "https://example.com/qingdao-church.jpg",
+        description: "德式風格教堂建築，是青島老城區最具代表性的歷史建物之一，常被用作婚紗與旅遊攝影場景。"
+      },
+      {
+        id: "zhongshan-road",
+        title: "中山路老街",
+        lat: 36.0700,
+        lng: 120.3235,
+        imageUrl: "https://example.com/zhongshan-road.jpg",
+        description: "青島老城區的傳統商業街，兩側保留許多老建築與在地小吃，是感受城市日常與歷史氛圍的好地方。"
+      },
+      {
+        id: "ship-dumpling",
+        title: "船歌魚水餃（中山路一帶）",
+        lat: 36.0690,
+        lng: 120.3245,
+        imageUrl: "https://example.com/chuange-dumpling.jpg",
+        description: "以海鮮水餃聞名的連鎖餐廳，招牌海膽與蝦仁水餃口感鮮甜，是初訪青島時非常安全又好吃的選擇。"
+      },
+      {
+        id: "liu-seafood",
+        title: "劉氏海鮮燒烤",
+        lat: 36.0730,
+        lng: 120.3260,
+        imageUrl: "https://example.com/liu-seafood-bbq.jpg",
+        description: "在地人也常光顧的海鮮燒烤店，烤扇貝、烤魷魚與蛤蜊是人氣菜色，搭配青島啤酒非常過癮。"
+      },
+      {
+        id: "beer-house",
+        title: "青島啤酒館（老城區）",
+        lat: 36.0745,
+        lng: 120.3250,
+        imageUrl: "https://example.com/qingdao-beer-house.jpg",
+        description: "提供多款青島啤酒與下酒菜的啤酒館，氣氛輕鬆，是晚上散步後小酌的好去處。"
+      },
+      {
+        id: "small-beer-hut",
+        title: "小木屋啤酒屋（棧橋附近）",
+        lat: 36.0605,
+        lng: 120.3190,
+        imageUrl: "https://example.com/small-beer-hut.jpg",
+        description: "位於棧橋附近的小店，適合看完海景後來一杯啤酒，享受海風與夜色。"
+      },
+      {
+        id: "cafe-1907",
+        title: "1907 咖啡館",
+        lat: 36.0645,
+        lng: 120.3220,
+        imageUrl: "https://example.com/1907-cafe.jpg",
+        description: "由老建築改造的文青咖啡館，保留歷史氛圍又帶有現代設計感，很適合早晨或離開前坐下來喝杯咖啡。"
+      },
+      {
+        id: "german-bakery",
+        title: "德國麵包房 German Bakery",
+        lat: 36.0680,
+        lng: 120.3215,
+        imageUrl: "https://example.com/german-bakery.jpg",
+        description: "提供德式麵包與輕食的麵包房，是不想吃太重時的好選擇，也很適合作為早餐或下午茶。"
+      }
+    ];
+
+    let map;
+    let infoWindow;
+
+    // === 2. 初始化地圖 ===
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 36.0675, lng: 120.3220 }, // 以英迪格附近為中心
+        zoom: 15
+      });
+
+      infoWindow = new google.maps.InfoWindow();
+
+      // 建立標記與側邊欄
+      renderMarkers();
+      renderSidebar();
+    }
+
+    // === 3. 在地圖上放 Marker ===
+    function renderMarkers() {
+      places.forEach(place => {
+        const marker = new google.maps.Marker({
+          position: { lat: place.lat, lng: place.lng },
+          map,
+          title: place.title
+        });
+
+        marker.addListener("click", () => {
+          openInfoWindow(place, marker);
+        });
+
+        place._marker = marker; // 存起來給側邊欄用
+      });
+    }
+
+    // === 4. 點 Marker / 清單時顯示 InfoWindow ===
+    function openInfoWindow(place, marker) {
+      const content = `
+        <div style="max-width:260px;">
+          <h3 style="margin:0 0 4px;font-size:16px;">${place.title}</h3>
+          <img src="${place.imageUrl}" alt="${place.title}" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;margin:4px 0 8px;" />
+          <p style="margin:0;font-size:13px;line-height:1.5;color:#444;">${place.description}</p>
+        </div>
+      `;
+      infoWindow.setContent(content);
+      infoWindow.open(map, marker);
+      map.panTo(marker.getPosition());
+    }
+
+    // === 5. 右側清單 ===
+    function renderSidebar() {
+      const listEl = document.getElementById("place-list");
+      places.forEach(place => {
+        const item = document.createElement("div");
+        item.className = "place";
+        item.innerHTML = `
+          <h3>${place.title}</h3>
+          <p>${place.description}</p>
+          <small>點擊可在地圖上定位</small>
+        `;
+        item.addEventListener("click", () => {
+          openInfoWindow(place, place._marker);
+        });
+        listEl.appendChild(item);
+      });
+    }
+  </script>
+
+  <!-- 6. 載入 Google Maps JS API：請將 YOUR_GOOGLE_MAPS_API_KEY 換成你的 Key -->
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>青島老城＆海邊景點地圖導覽</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+    }
+    #map {
+      flex: 2;
+      height: 100%;
+    }
+    #sidebar {
+      flex: 1;
+      max-width: 420px;
+      padding: 16px;
+      overflow-y: auto;
+      border-left: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+    .place {
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .place h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+    .place p {
+      margin: 0;
+      font-size: 13px;
+      color: #555;
+    }
+    .place small {
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="sidebar">
+    <h2>青島老城＆海邊景點導覽</h2>
+    <p>點選右側清單或地圖上的標記，可查看景點照片與背景說明。</p>
+    <div id="place-list"></div>
+  </div>
+
+  <script>
+    // === 1. 景點資料 ===
+    // imageUrl：請換成你想用的網路圖片連結
+    const places = [
+      {
+        id: "indigo",
+        title: "青島英迪格酒店 Hotel Indigo",
+        lat: 36.0665,
+        lng: 120.3205,
+        imageUrl: "https://example.com/indigo-qingdao.jpg",
+        description: "位於青島老城區核心的設計酒店，步行即可到棧橋、天主教堂與中山路老街，是探索老城與海邊的完美基地。"
+      },
+      {
+        id: "zhanqiao",
+        title: "棧橋（回瀾閣）",
+        lat: 36.0613,
+        lng: 120.3200,
+        imageUrl: "https://example.com/zhanqiao.jpg",
+        description: "青島最具代表性的地標之一，也是青島啤酒標誌上的亭閣原型。適合看海、散步與拍攝夕陽與夜景。"
+      },
+      {
+        id: "church",
+        title: "青島天主教堂",
+        lat: 36.0713,
+        lng: 120.3208,
+        imageUrl: "https://example.com/qingdao-church.jpg",
+        description: "德式風格教堂建築，是青島老城區最具代表性的歷史建物之一，常被用作婚紗與旅遊攝影場景。"
+      },
+      {
+        id: "zhongshan-road",
+        title: "中山路老街",
+        lat: 36.0700,
+        lng: 120.3235,
+        imageUrl: "https://example.com/zhongshan-road.jpg",
+        description: "青島老城區的傳統商業街，兩側保留許多老建築與在地小吃，是感受城市日常與歷史氛圍的好地方。"
+      },
+      {
+        id: "ship-dumpling",
+        title: "船歌魚水餃（中山路一帶）",
+        lat: 36.0690,
+        lng: 120.3245,
+        imageUrl: "https://example.com/chuange-dumpling.jpg",
+        description: "以海鮮水餃聞名的連鎖餐廳，招牌海膽與蝦仁水餃口感鮮甜，是初訪青島時非常安全又好吃的選擇。"
+      },
+      {
+        id: "liu-seafood",
+        title: "劉氏海鮮燒烤",
+        lat: 36.0730,
+        lng: 120.3260,
+        imageUrl: "https://example.com/liu-seafood-bbq.jpg",
+        description: "在地人也常光顧的海鮮燒烤店，烤扇貝、烤魷魚與蛤蜊是人氣菜色，搭配青島啤酒非常過癮。"
+      },
+      {
+        id: "beer-house",
+        title: "青島啤酒館（老城區）",
+        lat: 36.0745,
+        lng: 120.3250,
+        imageUrl: "https://example.com/qingdao-beer-house.jpg",
+        description: "提供多款青島啤酒與下酒菜的啤酒館，氣氛輕鬆，是晚上散步後小酌的好去處。"
+      },
+      {
+        id: "small-beer-hut",
+        title: "小木屋啤酒屋（棧橋附近）",
+        lat: 36.0605,
+        lng: 120.3190,
+        imageUrl: "https://example.com/small-beer-hut.jpg",
+        description: "位於棧橋附近的小店，適合看完海景後來一杯啤酒，享受海風與夜色。"
+      },
+      {
+        id: "cafe-1907",
+        title: "1907 咖啡館",
+        lat: 36.0645,
+        lng: 120.3220,
+        imageUrl: "https://example.com/1907-cafe.jpg",
+        description: "由老建築改造的文青咖啡館，保留歷史氛圍又帶有現代設計感，很適合早晨或離開前坐下來喝杯咖啡。"
+      },
+      {
+        id: "german-bakery",
+        title: "德國麵包房 German Bakery",
+        lat: 36.0680,
+        lng: 120.3215,
+        imageUrl: "https://example.com/german-bakery.jpg",
+        description: "提供德式麵包與輕食的麵包房，是不想吃太重時的好選擇，也很適合作為早餐或下午茶。"
+      }
+    ];
+
+    let map;
+    let infoWindow;
+
+    // === 2. 初始化地圖 ===
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 36.0675, lng: 120.3220 }, // 以英迪格附近為中心
+        zoom: 15
+      });
+
+      infoWindow = new google.maps.InfoWindow();
+
+      // 建立標記與側邊欄
+      renderMarkers();
+      renderSidebar();
+    }
+
+    // === 3. 在地圖上放 Marker ===
+    function renderMarkers() {
+      places.forEach(place => {
+        const marker = new google.maps.Marker({
+          position: { lat: place.lat, lng: place.lng },
+          map,
+          title: place.title
+        });
+
+        marker.addListener("click", () => {
+          openInfoWindow(place, marker);
+        });
+
+        place._marker = marker; // 存起來給側邊欄用
+      });
+    }
+
+    // === 4. 點 Marker / 清單時顯示 InfoWindow ===
+    function openInfoWindow(place, marker) {
+      const content = `
+        <div style="max-width:260px;">
+          <h3 style="margin:0 0 4px;font-size:16px;">${place.title}</h3>
+          <img src="${place.imageUrl}" alt="${place.title}" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;margin:4px 0 8px;" />
+          <p style="margin:0;font-size:13px;line-height:1.5;color:#444;">${place.description}</p>
+        </div>
+      `;
+      infoWindow.setContent(content);
+      infoWindow.open(map, marker);
+      map.panTo(marker.getPosition());
+    }
+
+    // === 5. 右側清單 ===
+    function renderSidebar() {
+      const listEl = document.getElementById("place-list");
+      places.forEach(place => {
+        const item = document.createElement("div");
+        item.className = "place";
+        item.innerHTML = `
+          <h3>${place.title}</h3>
+          <p>${place.description}</p>
+          <small>點擊可在地圖上定位</small>
+        `;
+        item.addEventListener("click", () => {
+          openInfoWindow(place, place._marker);
+        });
+        listEl.appendChild(item);
+      });
+    }
+  </script>
+
+  <!-- 6. 載入 Google Maps JS API：請將 YOUR_GOOGLE_MAPS_API_KEY 換成你的 Key -->
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap">
+  </script>
+</body>
+</html>
+&callback=initMap">
+  </script>
+</body>
+</html>
