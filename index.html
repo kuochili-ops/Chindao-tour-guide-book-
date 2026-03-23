@@ -10,6 +10,7 @@
       padding: 0;
       display: flex;
       height: 100vh;
+      color: #333;
     }
     #map {
       flex: 2;
@@ -18,39 +19,59 @@
     #sidebar {
       flex: 1;
       max-width: 420px;
-      padding: 16px;
+      padding: 20px;
       overflow-y: auto;
       border-left: 1px solid #ddd;
       box-sizing: border-box;
+      background: #f9f9f9;
     }
     .place {
+      background: #fff;
+      padding: 12px;
       margin-bottom: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .place:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
     .place h3 {
-      margin: 0 0 4px;
+      margin: 0 0 6px;
       font-size: 16px;
+      color: #007bff;
     }
     .place p {
-      margin: 0;
+      margin: 0 0 8px;
       font-size: 13px;
+      line-height: 1.4;
       color: #555;
     }
+    .place img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: block;
+    }
     .place small {
-      color: #888;
+      color: #999;
+      font-size: 11px;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="sidebar">
-    <h2>青島老城＆海邊景點導覽</h2>
-    <p>點選右側清單或地圖上的標記，可查看景點照片與背景說明。</p>
+    <h2>青島老城導覽</h2>
+    <p>點選下方景點或地圖標記查看詳情。</p>
     <div id="place-list"></div>
   </div>
 
   <script>
-    // === 景點資料（已全部替換成可用圖片） ===
     const places = [
       {
         id: "indigo",
@@ -58,7 +79,7 @@
         lat: 36.0665,
         lng: 120.3205,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4e/Qingdao_Historic_Building.jpg",
-        description: "位於青島老城區核心的設計酒店，步行即可到棧橋、天主教堂與中山路老街，是探索老城與海邊的完美基地。"
+        description: "位於青島老城區核心的設計酒店，是探索老城與海邊的完美基地。"
       },
       {
         id: "zhanqiao",
@@ -66,7 +87,7 @@
         lat: 36.0613,
         lng: 120.3200,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Zhanqiao_Pier_in_Qingdao_2018.jpg",
-        description: "青島最具代表性的地標之一，也是青島啤酒標誌上的亭閣原型。適合看海、散步與拍攝夕陽與夜景。"
+        description: "青島最具代表性的地標之一，也是青島啤酒標誌上的原型。"
       },
       {
         id: "church",
@@ -74,7 +95,7 @@
         lat: 36.0713,
         lng: 120.3208,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8e/St._Michael%27s_Cathedral_in_Qingdao_2018.jpg",
-        description: "德式風格教堂建築，是青島老城區最具代表性的歷史建物之一，常被用作婚紗與旅遊攝影場景。"
+        description: "德式風格教堂建築，是青島老城區最具代表性的歷史建物之一。"
       },
       {
         id: "zhongshan-road",
@@ -82,15 +103,15 @@
         lat: 36.0700,
         lng: 120.3235,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Zhongshan_Road_Qingdao_2018.jpg",
-        description: "青島老城區的傳統商業街，兩側保留許多老建築與在地小吃，是感受城市日常與歷史氛圍的好地方。"
+        description: "青島老城區的傳統商業街，保留許多老建築與在地小吃。"
       },
       {
         id: "ship-dumpling",
-        title: "船歌魚水餃（中山路一帶）",
+        title: "船歌魚水餃",
         lat: 36.0690,
         lng: 120.3245,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/0b/Qingdao_Zhongshan_Road_Street_View.jpg",
-        description: "以海鮮水餃聞名的連鎖餐廳，招牌海膽與蝦仁水餃口感鮮甜，是初訪青島時非常安全又好吃的選擇。"
+        description: "以海鮮水餃聞名的餐廳，招牌海膽與蝦仁水餃口感鮮甜。"
       },
       {
         id: "liu-seafood",
@@ -98,23 +119,23 @@
         lat: 36.0730,
         lng: 120.3260,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/6/6e/Qingdao_Seafood_Night_Market.jpg",
-        description: "在地人也常光顧的海鮮燒烤店，烤扇貝、烤魷魚與蛤蜊是人氣菜色，搭配青島啤酒非常過癮。"
+        description: "在地人也常光顧的海鮮燒烤店，搭配青島啤酒非常過癮。"
       },
       {
         id: "beer-house",
-        title: "青島啤酒館（老城區）",
+        title: "青島啤酒館",
         lat: 36.0745,
         lng: 120.3250,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Tsingtao_Beer_Museum_2018.jpg",
-        description: "提供多款青島啤酒與下酒菜的啤酒館，氣氛輕鬆，是晚上散步後小酌的好去處。"
+        description: "提供多款青島啤酒與下酒菜，氣氛輕鬆。"
       },
       {
         id: "small-beer-hut",
-        title: "小木屋啤酒屋（棧橋附近）",
+        title: "小木屋啤酒屋",
         lat: 36.0605,
         lng: 120.3190,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Qingdao_Seaside_Bar.jpg",
-        description: "位於棧橋附近的小店，適合看完海景後來一杯啤酒，享受海風與夜色。"
+        description: "位於棧橋附近，適合看海景後來一杯啤酒。"
       },
       {
         id: "cafe-1907",
@@ -122,15 +143,15 @@
         lat: 36.0645,
         lng: 120.3220,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Qingdao_Historic_Building_Cafe.jpg",
-        description: "由老建築改造的文青咖啡館，保留歷史氛圍又帶有現代設計感，很適合早晨或離開前坐下來喝杯咖啡。"
+        description: "由老建築改造的文青咖啡館，保留歷史氛圍。"
       },
       {
         id: "german-bakery",
-        title: "德國麵包房 German Bakery",
+        title: "德國麵包房",
         lat: 36.0680,
         lng: 120.3215,
         imageUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9f/German_Bakery_Bread.jpg",
-        description: "提供德式麵包與輕食的麵包房，是不想吃太重時的好選擇，也很適合作為早餐或下午茶。"
+        description: "提供正宗德式麵包，是很受歡迎的早餐選擇。"
       }
     ];
 
@@ -140,11 +161,11 @@
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 36.0675, lng: 120.3220 },
-        zoom: 15
+        zoom: 15,
+        styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
       });
 
       infoWindow = new google.maps.InfoWindow();
-
       renderMarkers();
       renderSidebar();
     }
@@ -154,7 +175,8 @@
         const marker = new google.maps.Marker({
           position: { lat: place.lat, lng: place.lng },
           map,
-          title: place.title
+          title: place.title,
+          animation: google.maps.Animation.DROP
         });
 
         marker.addListener("click", () => {
@@ -166,11 +188,15 @@
     }
 
     function openInfoWindow(place, marker) {
+      // 關鍵修復：加入 referrerpolicy="no-referrer"
       const content = `
-        <div style="max-width:260px;">
-          <h3 style="margin:0 0 4px;font-size:16px;">${place.title}</h3>
-          <img src="${place.imageUrl}" alt="${place.title}" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;margin:4px 0 8px;" />
-          <p style="margin:0;font-size:13px;line-height:1.5;color:#444;">${place.description}</p>
+        <div style="max-width:240px; font-family: sans-serif;">
+          <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
+          <img src="${place.imageUrl}" 
+               referrerpolicy="no-referrer" 
+               onerror="this.src='https://via.placeholder.com/240x150?text=Image+Not+Found'"
+               style="width:100%; height:150px; object-fit:cover; border-radius:4px; margin-bottom:8px;" />
+          <p style="margin:0; font-size:13px; color:#666; line-height:1.5;">${place.description}</p>
         </div>
       `;
       infoWindow.setContent(content);
@@ -184,19 +210,20 @@
         const item = document.createElement("div");
         item.className = "place";
         item.innerHTML = `
+          <img src="${place.imageUrl}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://via.placeholder.com/150x100?text=No+Image';">
           <h3>${place.title}</h3>
           <p>${place.description}</p>
-          <small>點擊可在地圖上定位</small>
+          <small>📍 點擊在地圖上查看</small>
         `;
         item.addEventListener("click", () => {
           openInfoWindow(place, place._marker);
+          map.setZoom(17);
         });
         listEl.appendChild(item);
       });
     }
   </script>
 
-  <!-- 換成你的 Google Maps API Key -->
   <script async
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap">
   </script>
