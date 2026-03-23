@@ -2,15 +2,15 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>青島老城＆海邊景點導覽</title>
+  <title>青島老城實景導覽地圖</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", sans-serif;
       margin: 0;
       padding: 0;
       display: flex;
       height: 100vh;
-      background-color: #f8f9fa;
+      background-color: #f0f2f5;
     }
     #map {
       flex: 2;
@@ -18,12 +18,12 @@
     }
     #sidebar {
       flex: 1;
-      max-width: 380px;
+      max-width: 400px;
       padding: 20px;
       overflow-y: auto;
-      border-left: 1px solid #e0e0e0;
+      border-left: 1px solid #d1d5db;
       box-sizing: border-box;
-      background: white;
+      background: #ffffff;
     }
     .place {
       margin-bottom: 24px;
@@ -31,133 +31,133 @@
       border-radius: 12px;
       overflow: hidden;
       background: #fff;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
       transition: all 0.3s ease;
+      border: 1px solid #eee;
     }
     .place:hover {
-      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
     }
     .place img {
       width: 100%;
-      height: 160px;
+      height: 180px;
       object-fit: cover;
       display: block;
     }
     .place-content {
-      padding: 15px;
+      padding: 16px;
     }
     .place h3 {
       margin: 0 0 8px;
       font-size: 18px;
-      color: #2c3e50;
+      color: #1a202c;
     }
     .place p {
       margin: 0;
-      font-size: 13px;
-      color: #7f8c8d;
+      font-size: 14px;
+      color: #4a5568;
       line-height: 1.6;
     }
     .place small {
       display: inline-block;
-      margin-top: 10px;
-      color: #3498db;
+      margin-top: 12px;
+      color: #3182ce;
       font-weight: 600;
-      font-size: 12px;
     }
-    h2 { color: #2c3e50; margin-top: 0; }
+    h2 { color: #2d3748; margin-top: 0; border-bottom: 2px solid #3182ce; padding-bottom: 10px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="sidebar">
-    <h2>青島老城導覽</h2>
-    <p style="color:#95a5a6; font-size:14px; margin-bottom:20px;">探索紅瓦綠樹、碧海藍天的老城魅力。</p>
+    <h2>青島景點實景導覽</h2>
+    <p style="color:#718096; font-size:14px; margin-bottom:20px;">點擊下方卡片，帶你穿梭老城與海岸線。</p>
     <div id="place-list"></div>
   </div>
 
   <script>
-    // 使用 Unsplash 穩定圖源，關鍵字匹配景點意象
+    // 替換為穩定的實景圖源
     const places = [
       {
         id: "indigo",
         title: "青島英迪格酒店 Hotel Indigo",
         lat: 36.0665,
         lng: 120.3205,
-        imageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
-        description: "精緻的設計酒店，完美融合青島老城的德式建築元素與現代舒適。"
+        imageUrl: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80",
+        description: "融合德式復古與現代潮流的設計酒店，窗外即是老城紅瓦綠樹的絕美景緻。"
       },
       {
         id: "zhanqiao",
         title: "棧橋（回瀾閣）",
         lat: 36.0613,
         lng: 120.3200,
-        imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
-        description: "青島的象徵，延伸入海的長廊與亭閣，是欣賞海上日落的絕佳位置。"
+        imageUrl: "https://images.unsplash.com/photo-1549413647-797745778a68?auto=format&fit=crop&w=800&q=80",
+        description: "青島百年的標誌，伸向大海的長廊，記錄著這座城市的開端與浪漫。"
       },
       {
         id: "church",
         title: "青島天主教堂",
         lat: 36.0713,
         lng: 120.3208,
-        imageUrl: "https://images.unsplash.com/photo-1548625361-12503254203a?auto=format&fit=crop&w=600&q=80",
-        description: "聖彌額爾大教堂，雙塔尖頂的德式美學，是老城區最具靈氣的地標。"
+        imageUrl: "https://images.unsplash.com/photo-1516491609584-c81831885b51?auto=format&fit=crop&w=800&q=80",
+        description: "宏偉的雙塔尖頂建築，在老城的坡道間若隱若現，是攝影愛好者的天堂。"
       },
       {
         id: "zhongshan-road",
         title: "中山路老街",
         lat: 36.0700,
         lng: 120.3235,
-        imageUrl: "https://images.unsplash.com/photo-1555992336-fb0d291986ce?auto=format&fit=crop&w=600&q=80",
-        description: "穿梭在百年老鋪與紅磚瓦房間，感受青島最道地的市井煙火氣。"
+        imageUrl: "https://images.unsplash.com/photo-1449156001533-cb39c7324c61?auto=format&fit=crop&w=800&q=80",
+        description: "曾經的商業核心，兩側老房子訴說著歷史，適合漫無目的地探索。"
       },
       {
         id: "ship-dumpling",
         title: "船歌魚水餃",
         lat: 36.0690,
         lng: 120.3245,
-        imageUrl: "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
-        description: "青島美食名片，墨魚與黃花魚入餡，咬開後的鮮甜是大海的味道。"
+        imageUrl: "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=800&q=80",
+        description: "以黑色墨魚皮包裹的鮮美海魚餡，每一口都是道地的青島海味。"
       },
       {
         id: "liu-seafood",
         title: "劉氏海鮮燒烤",
         lat: 36.0730,
         lng: 120.3260,
-        imageUrl: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&q=80",
-        description: "炭火上的鮮味，配上剛出廠的青島啤酒，是夏日夜晚的最佳註解。"
+        imageUrl: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80",
+        description: "大口吃肉、大口喝酒，在炭火香氣中感受北方城市的熱情。"
       },
       {
         id: "beer-house",
         title: "青島啤酒館",
         lat: 36.0745,
         lng: 120.3250,
-        imageUrl: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=600&q=80",
-        description: "聞著酒香找路，體驗這座城市血液裡流動的啤酒文化。"
+        imageUrl: "https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?auto=format&fit=crop&w=800&q=80",
+        description: "用塑膠袋裝啤酒是這裡的特色，喝的是這座城市的靈魂與記憶。"
       },
       {
         id: "small-beer-hut",
         title: "小木屋啤酒屋",
         lat: 36.0605,
         lng: 120.3190,
-        imageUrl: "https://images.unsplash.com/photo-1518176258769-f227c798150e?auto=format&fit=crop&w=600&q=80",
-        description: "簡約的海岸小屋，是旅行者與海浪對話的溫馨角落。"
+        imageUrl: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80",
+        description: "海邊的微醺時光，聽著浪潮聲，享受一杯最新鮮的原漿啤酒。"
       },
       {
         id: "cafe-1907",
         title: "1907 咖啡館",
         lat: 36.0645,
         lng: 120.3220,
-        imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80",
-        description: "在百年古蹟中靜靜品味一杯手沖，時光彷彿在此慢了下來。"
+        imageUrl: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=800&q=80",
+        description: "在德國水兵俱樂部舊址內，品味時光交織下的歐式優雅。"
       },
       {
         id: "german-bakery",
         title: "德國麵包房",
         lat: 36.0680,
         lng: 120.3215,
-        imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
-        description: "紮實的黑麥香氣，承襲百年的歐式工藝，簡單卻讓人懷念。"
+        imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80",
+        description: "純正的鹼水麵包與黑麥香氣，喚醒老城清晨的第一抹嗅覺記憶。"
       }
     ];
 
@@ -168,8 +168,9 @@
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 36.0675, lng: 120.3220 },
         zoom: 15,
+        disableDefaultUI: false,
         styles: [
-          { "featureType": "poi.business", "stylers": [{ "visibility": "off" }] }
+          { "featureType": "poi.park", "stylers": [{ "color": "#e5e7eb" }] }
         ]
       });
 
@@ -197,10 +198,10 @@
 
     function openInfoWindow(place, marker) {
       const content = `
-        <div style="max-width:240px; padding:5px;">
-          <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
-          <img src="${place.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
-          <p style="margin:0; font-size:13px; color:#555; line-height:1.5;">${place.description}</p>
+        <div style="max-width:260px; font-family: sans-serif;">
+          <h3 style="margin:0 0 10px; font-size:18px; color:#2d3748;">${place.title}</h3>
+          <img src="${place.imageUrl}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:10px;" />
+          <p style="margin:0; font-size:14px; color:#4a5568; line-height:1.5;">${place.description}</p>
         </div>
       `;
       infoWindow.setContent(content);
@@ -218,11 +219,14 @@
           <div class="place-content">
             <h3>${place.title}</h3>
             <p>${place.description}</p>
-            <small>📍 點擊查看地圖</small>
+            <small>📍 在地圖中顯示</small>
           </div>
         `;
         item.addEventListener("click", () => {
           openInfoWindow(place, place._marker);
+          if (window.innerWidth < 768) {
+            window.scrollTo(0, 0);
+          }
         });
         listEl.appendChild(item);
       });
