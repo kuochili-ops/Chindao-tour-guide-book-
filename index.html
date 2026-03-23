@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>青島老城＆海邊景點地圖導覽</title>
+  <title>青島老城＆海邊景點導覽</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -10,7 +10,7 @@
       padding: 0;
       display: flex;
       height: 100vh;
-      background-color: #f4f7f6;
+      background-color: #f8f9fa;
     }
     #map {
       flex: 2;
@@ -18,141 +18,146 @@
     }
     #sidebar {
       flex: 1;
-      max-width: 400px;
+      max-width: 380px;
       padding: 20px;
       overflow-y: auto;
-      border-left: 1px solid #ddd;
+      border-left: 1px solid #e0e0e0;
       box-sizing: border-box;
       background: white;
     }
     .place {
-      margin-bottom: 20px;
-      padding: 15px;
-      border-radius: 10px;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
       cursor: pointer;
-      transition: 0.3s;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
     }
     .place:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transform: translateY(-2px);
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+      transform: translateY(-3px);
     }
     .place img {
       width: 100%;
-      height: 150px;
+      height: 160px;
       object-fit: cover;
-      border-radius: 6px;
-      margin-bottom: 10px;
+      display: block;
+    }
+    .place-content {
+      padding: 15px;
     }
     .place h3 {
-      margin: 0 0 5px;
-      font-size: 17px;
-      color: #333;
+      margin: 0 0 8px;
+      font-size: 18px;
+      color: #2c3e50;
     }
     .place p {
       margin: 0;
       font-size: 13px;
-      color: #666;
-      line-height: 1.5;
+      color: #7f8c8d;
+      line-height: 1.6;
     }
     .place small {
-      display: block;
-      margin-top: 8px;
-      color: #007bff;
-      font-weight: bold;
+      display: inline-block;
+      margin-top: 10px;
+      color: #3498db;
+      font-weight: 600;
+      font-size: 12px;
     }
+    h2 { color: #2c3e50; margin-top: 0; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="sidebar">
-    <h2 style="margin-top:0;">青島老城導覽</h2>
-    <p style="font-size: 14px; color: #888; margin-bottom: 20px;">點選下方清單或地圖標記，查看景點故事與照片。</p>
+    <h2>青島老城導覽</h2>
+    <p style="color:#95a5a6; font-size:14px; margin-bottom:20px;">探索紅瓦綠樹、碧海藍天的老城魅力。</p>
     <div id="place-list"></div>
   </div>
 
   <script>
+    // 使用 Unsplash 穩定圖源，關鍵字匹配景點意象
     const places = [
       {
         id: "indigo",
         title: "青島英迪格酒店 Hotel Indigo",
         lat: 36.0665,
         lng: 120.3205,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4e/Qingdao_Historic_Building.jpg",
-        description: "位於青島老城區核心的設計酒店，步行即可到棧橋、天主教堂與中山路老街。"
+        imageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+        description: "精緻的設計酒店，完美融合青島老城的德式建築元素與現代舒適。"
       },
       {
         id: "zhanqiao",
         title: "棧橋（回瀾閣）",
         lat: 36.0613,
         lng: 120.3200,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Zhanqiao_Pier_in_Qingdao_2018.jpg",
-        description: "青島的地標，也是青島啤酒標誌上的亭閣原型，適合漫步海邊。"
+        imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
+        description: "青島的象徵，延伸入海的長廊與亭閣，是欣賞海上日落的絕佳位置。"
       },
       {
         id: "church",
         title: "青島天主教堂",
         lat: 36.0713,
         lng: 120.3208,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8e/St._Michael%27s_Cathedral_in_Qingdao_2018.jpg",
-        description: "德式風格教堂建築，雙塔尖頂是老城區最顯眼的風景線。"
+        imageUrl: "https://images.unsplash.com/photo-1548625361-12503254203a?auto=format&fit=crop&w=600&q=80",
+        description: "聖彌額爾大教堂，雙塔尖頂的德式美學，是老城區最具靈氣的地標。"
       },
       {
         id: "zhongshan-road",
         title: "中山路老街",
         lat: 36.0700,
         lng: 120.3235,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Zhongshan_Road_Qingdao_2018.jpg",
-        description: "傳統商業街，兩側保留許多百年老建築，充滿歷史韻味。"
+        imageUrl: "https://images.unsplash.com/photo-1555992336-fb0d291986ce?auto=format&fit=crop&w=600&q=80",
+        description: "穿梭在百年老鋪與紅磚瓦房間，感受青島最道地的市井煙火氣。"
       },
       {
         id: "ship-dumpling",
         title: "船歌魚水餃",
         lat: 36.0690,
         lng: 120.3245,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/0b/Qingdao_Zhongshan_Road_Street_View.jpg",
-        description: "招牌墨魚水餃與黃花魚水餃是來青島必嚐的美味。"
+        imageUrl: "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
+        description: "青島美食名片，墨魚與黃花魚入餡，咬開後的鮮甜是大海的味道。"
       },
       {
         id: "liu-seafood",
         title: "劉氏海鮮燒烤",
         lat: 36.0730,
         lng: 120.3260,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/6/6e/Qingdao_Seafood_Night_Market.jpg",
-        description: "在地熱門海鮮店，烤蛤蜊配上新鮮的原漿啤酒最道地。"
+        imageUrl: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&q=80",
+        description: "炭火上的鮮味，配上剛出廠的青島啤酒，是夏日夜晚的最佳註解。"
       },
       {
         id: "beer-house",
         title: "青島啤酒館",
         lat: 36.0745,
         lng: 120.3250,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Tsingtao_Beer_Museum_2018.jpg",
-        description: "體驗青島啤酒文化的最佳去處，感受這座城市的微醺日常。"
+        imageUrl: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=600&q=80",
+        description: "聞著酒香找路，體驗這座城市血液裡流動的啤酒文化。"
       },
       {
         id: "small-beer-hut",
         title: "小木屋啤酒屋",
         lat: 36.0605,
         lng: 120.3190,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Qingdao_Seaside_Bar.jpg",
-        description: "緊鄰海濱，在海風吹拂下享受正宗的青島扎啤。"
+        imageUrl: "https://images.unsplash.com/photo-1518176258769-f227c798150e?auto=format&fit=crop&w=600&q=80",
+        description: "簡約的海岸小屋，是旅行者與海浪對話的溫馨角落。"
       },
       {
         id: "cafe-1907",
         title: "1907 咖啡館",
         lat: 36.0645,
         lng: 120.3220,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Qingdao_Historic_Building_Cafe.jpg",
-        description: "百年建築光影裡的咖啡香，是老城區慢生活的縮影。"
+        imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80",
+        description: "在百年古蹟中靜靜品味一杯手沖，時光彷彿在此慢了下來。"
       },
       {
         id: "german-bakery",
         title: "德國麵包房",
         lat: 36.0680,
         lng: 120.3215,
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9f/German_Bakery_Bread.jpg",
-        description: "傳統德式烘焙，口味紮實，許多遊客慕名而來。"
+        imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
+        description: "紮實的黑麥香氣，承襲百年的歐式工藝，簡單卻讓人懷念。"
       }
     ];
 
@@ -163,11 +168,12 @@
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 36.0675, lng: 120.3220 },
         zoom: 15,
-        disableDefaultUI: false
+        styles: [
+          { "featureType": "poi.business", "stylers": [{ "visibility": "off" }] }
+        ]
       });
 
       infoWindow = new google.maps.InfoWindow();
-
       renderMarkers();
       renderSidebar();
     }
@@ -177,7 +183,8 @@
         const marker = new google.maps.Marker({
           position: { lat: place.lat, lng: place.lng },
           map,
-          title: place.title
+          title: place.title,
+          animation: google.maps.Animation.DROP
         });
 
         marker.addListener("click", () => {
@@ -189,14 +196,11 @@
     }
 
     function openInfoWindow(place, marker) {
-      // 修復關鍵：referrerpolicy="no-referrer"
       const content = `
         <div style="max-width:240px; padding:5px;">
           <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
-          <img src="${place.imageUrl}" 
-               referrerpolicy="no-referrer" 
-               style="width:100%; height:140px; object-fit:cover; border-radius:4px; margin-bottom:8px;" />
-          <p style="margin:0; font-size:13px; color:#555; line-height:1.4;">${place.description}</p>
+          <img src="${place.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
+          <p style="margin:0; font-size:13px; color:#555; line-height:1.5;">${place.description}</p>
         </div>
       `;
       infoWindow.setContent(content);
@@ -210,10 +214,12 @@
         const item = document.createElement("div");
         item.className = "place";
         item.innerHTML = `
-          <img src="${place.imageUrl}" referrerpolicy="no-referrer">
-          <h3>${place.title}</h3>
-          <p>${place.description}</p>
-          <small>📍 查看地圖位置</small>
+          <img src="${place.imageUrl}">
+          <div class="place-content">
+            <h3>${place.title}</h3>
+            <p>${place.description}</p>
+            <small>📍 點擊查看地圖</small>
+          </div>
         `;
         item.addEventListener("click", () => {
           openInfoWindow(place, place._marker);
