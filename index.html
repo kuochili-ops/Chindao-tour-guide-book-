@@ -2,71 +2,66 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>青島老城導覽 - 棧橋實景版</title>
+  <title>青島老城實景地圖導覽</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
       margin: 0;
-      padding: 0;
       display: flex;
       height: 100vh;
-      background-color: #f0f2f5;
+      background-color: #f5f7f9;
     }
-    #map {
-      flex: 2;
-      height: 100%;
-    }
+    #map { flex: 2; height: 100%; }
     #sidebar {
       flex: 1;
-      max-width: 380px;
-      padding: 20px;
+      max-width: 420px;
+      padding: 24px;
       overflow-y: auto;
-      border-left: 1px solid #d1d5db;
-      box-sizing: border-box;
-      background: #ffffff;
+      border-left: 1px solid #dee2e6;
+      background: #fff;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.05);
     }
     .place {
       margin-bottom: 24px;
-      cursor: pointer;
       border-radius: 12px;
       overflow: hidden;
       background: #fff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-      transition: all 0.3s ease;
-      border: 1px solid #eee;
+      border: 1px solid #edf2f7;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+      transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      cursor: pointer;
     }
     .place:hover {
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-      transform: translateY(-4px);
+      transform: translateY(-5px);
+      box-shadow: 0 12px 20px rgba(0,0,0,0.1);
     }
     .place img {
       width: 100%;
-      height: 180px;
+      height: 200px;
       object-fit: cover;
       display: block;
     }
-    .place-content {
-      padding: 16px;
+    .place-info { padding: 16px; }
+    .place h3 { margin: 0 0 8px; font-size: 19px; color: #2d3748; }
+    .place p { margin: 0; font-size: 14px; color: #4a5568; line-height: 1.6; }
+    .place .tag {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 2px 8px;
+      background: #ebf8ff;
+      color: #3182ce;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
     }
-    .place h3 {
-      margin: 0 0 8px;
-      font-size: 18px;
-      color: #1a202c;
-    }
-    .place p {
-      margin: 0;
-      font-size: 14px;
-      color: #4a5568;
-      line-height: 1.6;
-    }
-    h2 { color: #2d3748; margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    h2 { color: #1a202c; border-left: 5px solid #3182ce; padding-left: 12px; margin-top: 0; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="sidebar">
-    <h2>青島景點導覽</h2>
-    <p style="color:#718096; font-size:14px; margin-bottom:20px;">使用您提供的實景照片進行導覽。</p>
+    <h2>青島老城深度導覽</h2>
+    <p style="color:#718096; font-size:14px; margin-bottom:24px;">探索紅瓦綠樹、碧海藍天的百年歐式風情。</p>
     <div id="place-list"></div>
   </div>
 
@@ -77,38 +72,50 @@
         title: "棧橋（回瀾閣）",
         lat: 36.0613,
         lng: 120.3200,
-        // 使用您提供的實景網址
         imageUrl: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain",
-        description: "青島最具代表性的地標。回瀾閣是一座雙層八角亭，站在閣上可以觀賞『長虹遠引』與『回瀾拍岸』的壯麗景色。"
+        description: "青島的百年門面。長長的棧橋延伸進青島灣，盡頭的回瀾閣在海浪簇擁下顯得格外莊嚴。"
       },
       {
         id: "church",
         title: "青島天主教堂",
         lat: 36.0713,
         lng: 120.3208,
-        imageUrl: "https://images.unsplash.com/photo-1548625361-12503254203a?auto=format&fit=crop&w=800",
-        description: "聖彌額爾大教堂，德式雙塔建築。老城區最浪漫的背景，常有新人在此拍攝婚紗。"
+        imageUrl: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg",
+        description: "本名聖彌額爾大教堂，由德國建築師設計。它是老城區最高的建築之一，彩色碎石窗飾與雙塔尖頂非常吸睛。"
       },
       {
-        id: "indigo",
-        title: "青島英迪格酒店",
-        lat: 36.0665,
-        lng: 120.3205,
-        imageUrl: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800",
-        description: "位於老城核心，融合了青島特有的里院文化與現代設計，是探索老街的絕佳起點。"
+        id: "beer-museum",
+        title: "青島啤酒博物館",
+        lat: 36.0795,
+        lng: 120.3400,
+        imageUrl: "https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?auto=format&fit=crop&w=800",
+        description: "位於登州路老廠址，你可以親眼看到百年前的釀酒設備，並品嚐到全青島最新鮮的『原漿啤酒』。"
+      },
+      {
+        id: "xiaoyushan",
+        title: "小魚山公園",
+        lat: 36.0590,
+        lng: 120.3280,
+        imageUrl: "https://images.unsplash.com/photo-1548625361-12503254203a?auto=format&fit=crop&w=800",
+        description: "老城區的最佳觀景點。俯瞰匯泉灣，紅瓦、綠樹、碧海、藍天在此完美交織成一幅畫。"
+      },
+      {
+        id: "german-prison",
+        title: "德國監獄舊址博物館",
+        lat: 36.0620,
+        lng: 120.3240,
+        imageUrl: "https://images.unsplash.com/photo-1516491609584-c81831885b51?auto=format&fit=crop&w=800",
+        description: "這座充滿神祕感的紅磚建築曾是清末與德租時期的監獄，現已成為展示老城變遷的重要歷史場所。"
       }
-      // 其他景點可依此類推增加...
     ];
 
-    let map;
-    let infoWindow;
+    let map, infoWindow;
 
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 36.0675, lng: 120.3220 },
-        zoom: 15
+        center: { lat: 36.0675, lng: 120.3250 },
+        zoom: 14
       });
-
       infoWindow = new google.maps.InfoWindow();
       renderMarkers();
       renderSidebar();
@@ -119,25 +126,20 @@
         const marker = new google.maps.Marker({
           position: { lat: place.lat, lng: place.lng },
           map,
-          title: place.title
+          title: place.title,
+          animation: google.maps.Animation.DROP
         });
-
-        marker.addListener("click", () => {
-          openInfoWindow(place, marker);
-        });
-
+        marker.addListener("click", () => openInfoWindow(place, marker));
         place._marker = marker;
       });
     }
 
     function openInfoWindow(place, marker) {
       const content = `
-        <div style="max-width:240px;">
-          <h3 style="margin:0 0 8px;">${place.title}</h3>
-          <img src="${place.imageUrl}" 
-               referrerpolicy="no-referrer" 
-               style="width:100%; height:140px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
-          <p style="margin:0; font-size:13px; color:#555;">${place.description}</p>
+        <div style="max-width:240px; padding:5px;">
+          <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
+          <img src="${place.imageUrl}" referrerpolicy="no-referrer" style="width:100%; height:130px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
+          <p style="margin:0; font-size:13px; color:#555; line-height:1.4;">${place.description}</p>
         </div>
       `;
       infoWindow.setContent(content);
@@ -152,21 +154,18 @@
         item.className = "place";
         item.innerHTML = `
           <img src="${place.imageUrl}" referrerpolicy="no-referrer">
-          <div class="place-content">
+          <div class="place-info">
             <h3>${place.title}</h3>
             <p>${place.description}</p>
+            <span class="tag">查看詳情</span>
           </div>
         `;
-        item.addEventListener("click", () => {
-          openInfoWindow(place, place._marker);
-        });
+        item.addEventListener("click", () => openInfoWindow(place, place._marker));
         listEl.appendChild(item);
       });
     }
   </script>
 
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap">
-  </script>
+  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
 </body>
 </html>
