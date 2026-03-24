@@ -3,40 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>青島足跡紀錄 - White 6 完整版</title>
+  <title>青島足跡 - White 6 全導覽版</title>
   <style>
     body { font-family: -apple-system, sans-serif; margin: 0; display: flex; height: 100vh; flex-direction: row; background: #f8f9fa; }
     #map { flex: 2; height: 100%; width: 100%; }
     #sidebar { flex: 1; max-width: 420px; padding: 15px; overflow-y: auto; border-left: 1px solid #ddd; background: white; }
-    @media (max-width: 768px) { body { flex-direction: column; } #map { flex: none; height: 40vh; } #sidebar { max-width: 100%; flex: 1; } }
+    @media (max-width: 768px) { body { flex-direction: column; } #map { flex: none; height: 50vh; } #sidebar { max-width: 100%; flex: 1; } }
     
-    .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .add-btn { background: #007bff; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .add-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     
     .place-card { display: flex; gap: 12px; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px; cursor: pointer; background: #fff; transition: 0.2s; }
-    .place-card:hover { background: #f0f7ff; border-color: #007bff; }
+    .place-card:hover { background: #f0f7ff; }
     .place-card img { width: 85px; height: 85px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-    .place-card.user-added { border-left: 5px solid #28a745; }
+    .user-record { border-left: 5px solid #28a745; }
     
     .card-info h3 { margin: 0; font-size: 16px; color: #0056b3; }
     .card-info p { margin: 5px 0; font-size: 12px; color: #666; line-height: 1.4; }
-    .card-info small { color: #999; font-size: 11px; }
+    .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e9ecef; color: #495057; }
 
-    /* Modal 樣式 */
+    /* Modal */
     #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 380px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); z-index: 1001; }
     #modal input, #modal textarea { width: 100%; margin-bottom: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-    #preview-img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: none; }
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
-    .sync-status { color: #007bff; font-weight: bold; text-align: center; display: none; margin-bottom: 10px; }
+    #preview { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: none; }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="sidebar">
-  <div class="header-box">
+  <div class="header">
     <h2 style="margin:0; font-size: 18px;">青島老城導覽</h2>
-    <button class="add-btn" onclick="openModal()">＋ 紀錄足跡</button>
+    <button class="add-btn" onclick="openModal()">📸 紀錄足跡</button>
   </div>
   <div id="place-list"></div>
 </div>
@@ -44,83 +43,85 @@
 <div id="overlay" onclick="closeModal()"></div>
 <div id="modal">
   <h3 style="margin-top:0">📸 現場足跡紀錄</h3>
-  <img id="preview-img">
-  <div id="sync-ui" class="sync-status">正在上傳雲端...</div>
-  
+  <img id="preview">
   <input type="text" id="m-title" placeholder="景點名稱">
   <textarea id="m-desc" rows="3" placeholder="寫下現在的心情..."></textarea>
-  
-  <label style="display:block; margin-bottom:15px; padding:10px; background:#f8f9fa; border:1px dashed #ccc; text-align:center; border-radius:6px; cursor:pointer;">
-    <span id="file-status">選取照片或拍照</span>
-    <input type="file" id="m-file" accept="image/*" style="display:none;" onchange="handlePreview(this)">
-  </label>
-
-  <div style="display:flex; gap:10px;">
-    <button id="save-btn" onclick="uploadAndSave()" style="flex:2; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:bold;">確認儲存</button>
-    <button onclick="closeModal()" style="flex:1; background:#eee; border:none; border-radius:8px;">取消</button>
-  </div>
+  <input type="file" id="m-file" accept="image/*" style="margin-bottom:15px;" onchange="handleFile(this)">
+  <button id="save-btn" onclick="startUpload()" style="width:100%; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:bold;">同步雲端並儲存</button>
 </div>
 
 <script>
-  // Cloudinary 設定
   const CLOUD_NAME = "dnwwaush7"; 
   const UPLOAD_PRESET = "Guidebook";
   
-  // 1. 回復原本的所有景點資料
+  // 1. 回復原本的 9 個景點資料
   const defaultPlaces = [
-    { title: "青島英迪格酒店", lat: 36.0665, lng: 120.3205, img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600", desc: "融合里院文化與時尚設計，可俯瞰老城區紅瓦綠樹。" },
-    { title: "棧橋（回瀾閣）", lat: 36.0613, lng: 120.3200, img: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", desc: "1892年建，青島標誌。盡頭的回瀾閣是青島啤酒標誌原型。" },
-    { title: "青島天主教堂", lat: 36.0713, lng: 120.3208, img: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", desc: "聖彌額爾大教堂，1934年落成的哥德式地標建築。" },
-    { title: "中山路老街", lat: 36.0700, lng: 120.3235, img: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg", desc: "百年商業街，保留大量德式建築與傳統里院。" },
-    { title: "船歌魚水餃", lat: 36.0690, lng: 120.3245, img: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg", desc: "青島特色美食，招牌墨魚水餃必嚐。" },
-    { title: "劉氏海鮮燒烤", lat: 36.0730, lng: 120.3260, img: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg", desc: "在地知名海鮮店，提供當季新鮮平價海產。" },
-    { title: "青島啤酒館", lat: 36.0745, lng: 120.3250, img: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png", desc: "體驗「啤酒之都」的文化，品嚐最新鮮的原漿啤酒。" },
+    { title: "青島英迪格酒店", lat: 36.0665, lng: 120.3205, img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600", desc: "融合里院文化與時尚設計，俯瞰紅瓦綠樹的最佳起點。" },
+    { title: "棧橋 (回瀾閣)", lat: 36.0613, lng: 120.3200, img: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", desc: "1892年建，青島地標，青島啤酒原型所在地。" },
+    { title: "青島天主教堂", lat: 36.0713, lng: 120.3208, img: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", desc: "聖彌額爾大教堂，德國設計師作品，浪漫的哥德式建築。" },
+    { title: "中山路老街", lat: 36.0700, lng: 120.3235, img: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg", desc: "百年商業街，尋找老青島的繁華記憶與特色里院。" },
+    { title: "船歌魚水餃", lat: 36.0690, lng: 120.3245, img: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg", desc: "在地必吃美食，招牌墨魚水餃與黃魚水餃。" },
+    { title: "劉氏海鮮燒烤", lat: 36.0730, lng: 120.3260, img: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg", desc: "接地氣的海鮮排擋，體驗青島人的宵夜文化。" },
+    { title: "青島啤酒博物館", lat: 36.0745, lng: 120.3250, img: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png", desc: "登州路56號，在百年廠房裡喝一杯最新鮮的原漿。" },
     { title: "1907 咖啡館", lat: 36.0645, lng: 120.3220, img: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg", desc: "原德國水兵俱樂部，中國第一家電影院所在地。" },
-    { title: "德國麵包房", lat: 36.0680, lng: 120.3215, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", desc: "保留傳統德式烘焙技術，鹼水結與黑麥麵包極具特色。" }
+    { title: "德國麵包房", lat: 36.0680, lng: 120.3215, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", desc: "隱藏在巷弄中的正宗德式烘焙，鹼水結非常出名。" }
   ];
 
-  let map, infoWindow, userPos = { lat: 36.0675, lng: 120.3220 }, fileToUpload = null;
+  let map, infoWindow, userMarker, userLatLng = { lat: 36.0675, lng: 120.3220 }, uploadFile = null;
 
   function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
-      center: userPos,
-      zoom: 15,
-      gestureHandling: "greedy",
-      disableDefaultUI: true
+      center: userLatLng, zoom: 16, gestureHandling: "greedy", mapTypeControl: false
     });
     infoWindow = new google.maps.InfoWindow();
-    updateLocation();
+
+    // 建立方向箭頭
+    userMarker = new google.maps.Marker({
+      position: userLatLng, map: map,
+      icon: {
+        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0
+      }
+    });
+
+    // 定位與方向追蹤
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(p => {
+        userLatLng = { lat: p.coords.latitude, lng: p.coords.longitude };
+        userMarker.setPosition(userLatLng);
+      }, null, { enableHighAccuracy: true });
+    }
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientationabsolute', e => {
+        let heading = e.webkitCompassHeading || (360 - e.alpha);
+        if (heading) {
+          let icon = userMarker.getIcon();
+          icon.rotation = heading;
+          userMarker.setIcon(icon);
+        }
+      }, true);
+    }
     renderAll();
   }
 
-  function updateLocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(p => {
-        userPos = { lat: p.coords.latitude, lng: p.coords.longitude };
-        map.setCenter(userPos);
-      }, null, { enableHighAccuracy: true });
+  function handleFile(input) {
+    uploadFile = input.files[0];
+    if (uploadFile) {
+      const pre = document.getElementById('preview');
+      pre.src = URL.createObjectURL(uploadFile); pre.style.display = 'block';
     }
   }
 
-  function handlePreview(input) {
-    fileToUpload = input.files[0];
-    if (fileToUpload) {
-      document.getElementById('file-status').innerText = "✅ 照片已就緒";
-      const pre = document.getElementById('preview-img');
-      pre.src = URL.createObjectURL(fileToUpload);
-      pre.style.display = 'block';
-    }
-  }
-
-  async function uploadAndSave() {
+  async function startUpload() {
     const title = document.getElementById('m-title').value;
-    if (!title || !fileToUpload) return alert("請輸入名稱並選取照片");
+    if (!title || !uploadFile) return alert("請填寫景點名並拍攝照片");
     
     const btn = document.getElementById('save-btn');
-    btn.disabled = true; document.getElementById('sync-ui').style.display = 'block';
+    btn.innerText = "同步中..."; btn.disabled = true;
 
     const fd = new FormData();
-    fd.append('file', fileToUpload);
+    fd.append('file', uploadFile);
     fd.append('upload_preset', UPLOAD_PRESET);
 
     try {
@@ -131,60 +132,49 @@
         title, isUser: true,
         desc: document.getElementById('m-desc').value,
         img: data.secure_url,
-        lat: userPos.lat, lng: userPos.lng,
+        lat: userLatLng.lat, lng: userLatLng.lng,
         time: new Date().toLocaleDateString()
       };
 
-      const history = JSON.parse(localStorage.getItem('white6_trip_records') || "[]");
+      const history = JSON.parse(localStorage.getItem('white6_trip_final') || "[]");
       history.unshift(record);
-      localStorage.setItem('white6_trip_records', JSON.stringify(history));
+      localStorage.setItem('white6_trip_final', JSON.stringify(history));
       
       renderAll();
       closeModal();
     } catch (e) { alert("上傳失敗"); }
-    finally { btn.disabled = false; document.getElementById('sync-ui').style.display = 'none'; }
+    finally { btn.innerText = "同步雲端並儲存"; btn.disabled = false; }
   }
 
   function renderAll() {
     const list = document.getElementById('place-list');
     list.innerHTML = "";
-    const history = JSON.parse(localStorage.getItem('white6_trip_records') || "[]");
-    
-    // 合併資料：使用者紀錄排在最上面
+    const history = JSON.parse(localStorage.getItem('white6_trip_final') || "[]");
     const all = [...history, ...defaultPlaces];
 
     all.forEach(p => {
       const marker = new google.maps.Marker({ position: { lat: p.lat, lng: p.lng }, map });
       marker.addListener("click", () => {
-        infoWindow.setContent(`
-          <div style="max-width:180px">
-            <img src="${p.img}" style="width:100%; border-radius:6px; margin-bottom:5px;">
-            <h4 style="margin:0">${p.title}</h4>
-            <p style="font-size:11px; color:#555; line-height:1.3;">${p.desc}</p>
-          </div>`);
+        infoWindow.setContent(`<div style="max-width:200px"><img src="${p.img}" style="width:100%;border-radius:6px;"><h4 style="margin:5px 0">${p.title}</h4><p style="font-size:12px;color:#666">${p.desc}</p></div>`);
         infoWindow.open(map, marker);
       });
 
       const card = document.createElement('div');
-      card.className = `place-card ${p.isUser ? 'user-added' : ''}`;
+      card.className = `place-card ${p.isUser ? 'user-record' : ''}`;
       card.innerHTML = `
         <img src="${p.img}">
         <div class="card-info">
           <h3>${p.title}</h3>
-          <p>${p.desc.substring(0,25)}...</p>
-          ${p.time ? `<small>📍 紀錄於 ${p.time}</small>` : ''}
+          <p>${p.desc.substring(0,30)}...</p>
+          <span class="tag">${p.time ? '📍 我的紀錄' : '🚩 導覽景點'}</span>
         </div>`;
-      card.onclick = () => {
-        map.panTo({lat:p.lat, lng:p.lng});
-        google.maps.event.trigger(marker, 'click');
-        if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'smooth' });
-      };
+      card.onclick = () => { map.panTo({lat:p.lat, lng:p.lng}); google.maps.event.trigger(marker, 'click'); };
       list.appendChild(card);
     });
   }
 
-  function openModal() { updateLocation(); document.getElementById('modal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; }
-  function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; document.getElementById('preview-img').style.display = 'none'; fileToUpload = null; }
+  function openModal() { document.getElementById('modal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; }
+  function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; uploadFile = null; }
 </script>
 <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
 </body>
