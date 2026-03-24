@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>青島老城導覽 - White 6 實景版</title>
+  <title>青島老城拍照導覽 - White 6 實景版</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -29,7 +29,7 @@
     /* 手機版 RWD 排版 */
     @media (max-width: 768px) {
       body { flex-direction: column; }
-      #map { flex: none; height: 45vh; }
+      #map { flex: none; height: 40vh; }
       #sidebar { max-width: 100%; flex: 1; border-left: none; border-top: 1px solid #ddd; }
     }
 
@@ -54,8 +54,8 @@
     }
 
     .place img {
-      width: 85px;
-      height: 85px;
+      width: 90px;
+      height: 90px;
       object-fit: cover;
       border-radius: 8px;
       flex-shrink: 0;
@@ -63,19 +63,33 @@
 
     .place-info h3 { margin: 0 0 5px; font-size: 16px; color: #0056b3; }
     .place-info p { margin: 0; font-size: 13px; color: #666; line-height: 1.5; }
+    .photo-hint { font-size: 12px; color: #d9534f; margin-top: 5px; font-weight: bold; }
 
-    /* 彈窗內按鈕樣式 */
+    /* 彈窗樣式 */
+    .info-box { max-width: 240px; padding: 5px; }
     .info-btn {
       display: inline-block;
       margin-top: 10px;
-      padding: 6px 12px;
+      padding: 8px 12px;
       background-color: #0056b3;
       color: white;
       text-decoration: none;
       border-radius: 4px;
       font-size: 12px;
       font-weight: bold;
+      width: 100%;
+      box-sizing: border-box;
       text-align: center;
+    }
+    .photo-spot-tag {
+      background: #fff3f3;
+      color: #d9534f;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 8px;
+      display: inline-block;
+      border: 1px solid #ffcccc;
     }
   </style>
 </head>
@@ -84,21 +98,21 @@
   <div id="map"></div>
 
   <div id="sidebar">
-    <h2>青島老城導覽</h2>
-    <p style="font-size: 13px; color: #888; margin-bottom: 20px;">點選下方景點或地圖標記，查看歷史背景與實景照片。</p>
+    <h2>青島老城拍照導覽</h2>
+    <p style="font-size: 13px; color: #888; margin-bottom: 20px;">每個景點均標註「最佳拍照點」，點擊查看攻略。</p>
     <div id="place-list"></div>
   </div>
 
   <script>
-    // 景點資料庫：包含實景圖、文字介紹與參考連結
     const places = [
       {
         id: "indigo",
-        title: "青島英迪格酒店 Hotel Indigo",
+        title: "青島英迪格酒店",
         lat: 36.0665,
         lng: 120.3205,
         imageUrl: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600",
-        description: "融合老城德式風情與摩登設計，是探索紅瓦綠樹建築群的最佳基地。",
+        description: "德式風情精品酒店，內部裝潢極具設計感。",
+        photoSpot: "📸 拍照點：飯店露台或大廳里院裝飾，適合拍摩登人像。",
         link: "https://www.ihg.com/hotelindigo/hotels/tw/zh/qingdao/taohu/hoteldetail"
       },
       {
@@ -107,7 +121,8 @@
         lat: 36.0613,
         lng: 120.3200,
         imageUrl: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain",
-        description: "始建於1892年。盡頭的回瀾閣是青島啤酒標誌的原型，也是觀景地標。",
+        description: "1892年建。回瀾閣是青島啤酒標誌原型。",
+        photoSpot: "📸 拍照點：長廊中段往回瀾閣拍，或退到第六海濱浴場拍棧橋全景。",
         link: "https://zh.wikipedia.org/zh-tw/%E6%A0%88%E6%A1%A5_(%E9%9D%92%E5%B2%9B)"
       },
       {
@@ -116,7 +131,8 @@
         lat: 36.0713,
         lng: 120.3208,
         imageUrl: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg",
-        description: "聖彌額爾大教堂，1934年落成。德式雙塔建築，是老城區著名的攝影勝地。",
+        description: "1934年落成的哥德式雙塔建築。",
+        photoSpot: "📸 拍照點：教堂前廣場斜對角角度，可拍出建築宏偉感。",
         link: "https://zh.wikipedia.org/zh-tw/%E5%9C%A3%E5%BC%A5%E9%A2%9D%E5%B0%94%E4%B8%BB%E6%95%99%E5%BA%A7%E5%A0%82_(%E9%9D%92%E5%B2%9B)"
       },
       {
@@ -125,7 +141,8 @@
         lat: 36.0700,
         lng: 120.3235,
         imageUrl: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg",
-        description: "百年歷史商業街，保留大量德租時期建築，見證城市從漁村走向現代。",
+        description: "百年商業街，保留大量老建築與里院文化。",
+        photoSpot: "📸 拍照點：夜晚燈光亮起後的復古街景，最具電影感。",
         link: "https://baike.baidu.com/item/%E4%B8%AD%E5%B1%B1%E8%B7%AF/10006"
       },
       {
@@ -134,7 +151,8 @@
         lat: 36.0690,
         lng: 120.3245,
         imageUrl: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg",
-        description: "以海鮮入餡聞名，墨魚水餃與黃花魚水餃是來青島必嚐的在地美味。",
+        description: "招牌墨魚水餃是必嚐特色美食。",
+        photoSpot: "📸 拍照點：切開後的黑白墨魚水餃斷面，視覺感強烈。",
         link: "http://www.chuange.cn/"
       },
       {
@@ -143,7 +161,8 @@
         lat: 36.0730,
         lng: 120.3260,
         imageUrl: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg",
-        description: "道地的平價海鮮燒烤。烤扇貝配上特有的原漿啤酒，體驗道地生活。",
+        description: "在地人推崇的平價海鮮與燒烤。",
+        photoSpot: "📸 拍照點：澎湃的海鮮大拼盤與滿杯的原漿啤酒。",
         link: "https://www.dianping.com/shop/G6P8I2H3f6m0v7K1"
       },
       {
@@ -152,7 +171,8 @@
         lat: 36.0745,
         lng: 120.3250,
         imageUrl: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png",
-        description: "緊鄰啤酒博物館區域，提供當年生產的新鮮生啤，感受城市的微醺氛圍。",
+        description: "感受這座城市最具代表性的啤酒文化。",
+        photoSpot: "📸 拍照點：戶外座位的原木酒桶與大杯紮啤。",
         link: "https://www.tsingtaomuseum.com/"
       },
       {
@@ -161,16 +181,18 @@
         lat: 36.0645,
         lng: 120.3220,
         imageUrl: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg",
-        description: "原德國水兵俱樂部舊址。在百年歷史空間中品味咖啡，彷彿穿越時空。",
+        description: "原德國水兵俱樂部舊址，極具電影藝術氣息。",
+        photoSpot: "📸 拍照點：百年木質旋轉樓梯，是文青必拍點。",
         link: "https://zh.wikipedia.org/zh-tw/%E9%9D%92%E5%B2%9B%E5%BE%B7%E5%9B%BD%E6%B0%B4%E5%85%B5%E4%BF%B1%E4%B9%90%E9%83%A8%E6%97%A7%E5%9D%80"
       },
       {
         id: "german-bakery",
-        title: "德國麵包房 German Bakery",
+        title: "德國麵包房",
         lat: 36.0680,
         lng: 120.3215,
         imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10",
-        description: "傳承德式烘焙技術，提供紮實的黑麥麵包，是老城區飄散百年的麥香。",
+        description: "紮實德式口味，老城區飄散百年的麥香。",
+        photoSpot: "📸 拍照點：傳統木櫥窗與陳列整齊的鹼水結麵包。",
         link: "https://www.dianping.com/shop/G6P8I2H3f6m0v7K1"
       }
     ];
@@ -178,14 +200,11 @@
     let map, infoWindow;
 
     function initMap() {
-      // 設定地圖中心於老城區
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 36.0675, lng: 120.3220 },
         zoom: 15,
-        gestureHandling: "greedy", // 手機端單指操作
-        disableDefaultUI: false
+        gestureHandling: "greedy"
       });
-
       infoWindow = new google.maps.InfoWindow();
       renderMarkers();
       renderSidebar();
@@ -193,27 +212,20 @@
 
     function renderMarkers() {
       places.forEach(place => {
-        const marker = new google.maps.Marker({
-          position: { lat: place.lat, lng: place.lng },
-          map,
-          title: place.title
-        });
-
-        marker.addListener("click", () => {
-          openInfoWindow(place, marker);
-        });
-
+        const marker = new google.maps.Marker({ position: { lat: place.lat, lng: place.lng }, map });
+        marker.addListener("click", () => openInfoWindow(place, marker));
         place._marker = marker;
       });
     }
 
     function openInfoWindow(place, marker) {
       const content = `
-        <div style="max-width:240px; padding:5px;">
-          <h3 style="margin:0 0 8px; font-size:16px; color:#333;">${place.title}</h3>
+        <div class="info-box">
+          <div class="photo-spot-tag">${place.photoSpot}</div>
+          <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
           <img src="${place.imageUrl}" referrerpolicy="no-referrer" style="width:100%; height:130px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
-          <p style="margin:0; font-size:13px; color:#555; line-height:1.4;">${place.description}</p>
-          <a href="${place.link}" target="_blank" class="info-btn">📚 查看背景介紹連結</a>
+          <p style="margin:0; font-size:12px; color:#555; line-height:1.4;">${place.description}</p>
+          <a href="${place.link}" target="_blank" class="info-btn">📚 閱讀深度背景</a>
         </div>
       `;
       infoWindow.setContent(content);
@@ -231,11 +243,11 @@
           <div class="place-info">
             <h3>${place.title}</h3>
             <p>${place.description}</p>
+            <div class="photo-hint">${place.photoSpot}</div>
           </div>
         `;
         item.addEventListener("click", () => {
           openInfoWindow(place, place._marker);
-          // 點擊後手機版自動滾動到地圖視窗
           if (window.innerWidth <= 768) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
@@ -244,7 +256,6 @@
       });
     }
   </script>
-
   <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
 </body>
 </html>
