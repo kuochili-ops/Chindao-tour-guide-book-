@@ -3,259 +3,189 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>青島老城拍照導覽 - White 6 實景版</title>
+  <title>青島足跡紀錄 - White 6 完整版</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
-      margin: 0;
-      display: flex;
-      height: 100vh;
-      background-color: #f4f7f6;
-      flex-direction: row;
-    }
-
+    body { font-family: -apple-system, sans-serif; margin: 0; display: flex; height: 100vh; flex-direction: row; background: #f8f9fa; }
     #map { flex: 2; height: 100%; width: 100%; }
+    #sidebar { flex: 1; max-width: 420px; padding: 15px; overflow-y: auto; border-left: 1px solid #ddd; background: white; }
+    @media (max-width: 768px) { body { flex-direction: column; } #map { flex: none; height: 40vh; } #sidebar { max-width: 100%; flex: 1; } }
+    
+    .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .add-btn { background: #007bff; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    
+    .place-card { display: flex; gap: 12px; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px; cursor: pointer; background: #fff; transition: 0.2s; }
+    .place-card:hover { background: #f0f7ff; border-color: #007bff; }
+    .place-card img { width: 85px; height: 85px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .place-card.user-added { border-left: 5px solid #28a745; }
+    
+    .card-info h3 { margin: 0; font-size: 16px; color: #0056b3; }
+    .card-info p { margin: 5px 0; font-size: 12px; color: #666; line-height: 1.4; }
+    .card-info small { color: #999; font-size: 11px; }
 
-    #sidebar {
-      flex: 1;
-      max-width: 400px;
-      padding: 20px;
-      overflow-y: auto;
-      border-left: 1px solid #ddd;
-      background: white;
-      box-shadow: -2px 0 5px rgba(0,0,0,0.05);
-    }
-
-    /* 手機版 RWD 排版 */
-    @media (max-width: 768px) {
-      body { flex-direction: column; }
-      #map { flex: none; height: 40vh; }
-      #sidebar { max-width: 100%; flex: 1; border-left: none; border-top: 1px solid #ddd; }
-    }
-
-    h2 { color: #333; margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 10px; font-size: 20px; }
-
-    .place {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 15px;
-      padding: 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      background: #fff;
-      border: 1px solid #eee;
-      transition: all 0.2s ease;
-    }
-
-    .place:hover {
-      background-color: #f0f7ff;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    }
-
-    .place img {
-      width: 90px;
-      height: 90px;
-      object-fit: cover;
-      border-radius: 8px;
-      flex-shrink: 0;
-    }
-
-    .place-info h3 { margin: 0 0 5px; font-size: 16px; color: #0056b3; }
-    .place-info p { margin: 0; font-size: 13px; color: #666; line-height: 1.5; }
-    .photo-hint { font-size: 12px; color: #d9534f; margin-top: 5px; font-weight: bold; }
-
-    /* 彈窗樣式 */
-    .info-box { max-width: 240px; padding: 5px; }
-    .info-btn {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 8px 12px;
-      background-color: #0056b3;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      width: 100%;
-      box-sizing: border-box;
-      text-align: center;
-    }
-    .photo-spot-tag {
-      background: #fff3f3;
-      color: #d9534f;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      margin-bottom: 8px;
-      display: inline-block;
-      border: 1px solid #ffcccc;
-    }
+    /* Modal 樣式 */
+    #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 380px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); z-index: 1001; }
+    #modal input, #modal textarea { width: 100%; margin-bottom: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+    #preview-img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: none; }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
+    .sync-status { color: #007bff; font-weight: bold; text-align: center; display: none; margin-bottom: 10px; }
   </style>
 </head>
 <body>
 
-  <div id="map"></div>
-
-  <div id="sidebar">
-    <h2>青島老城拍照導覽</h2>
-    <p style="font-size: 13px; color: #888; margin-bottom: 20px;">每個景點均標註「最佳拍照點」，點擊查看攻略。</p>
-    <div id="place-list"></div>
+<div id="map"></div>
+<div id="sidebar">
+  <div class="header-box">
+    <h2 style="margin:0; font-size: 18px;">青島老城導覽</h2>
+    <button class="add-btn" onclick="openModal()">＋ 紀錄足跡</button>
   </div>
+  <div id="place-list"></div>
+</div>
 
-  <script>
-    const places = [
-      {
-        id: "indigo",
-        title: "青島英迪格酒店",
-        lat: 36.0665,
-        lng: 120.3205,
-        imageUrl: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600",
-        description: "德式風情精品酒店，內部裝潢極具設計感。",
-        photoSpot: "📸 拍照點：飯店露台或大廳里院裝飾，適合拍摩登人像。",
-        link: "https://www.ihg.com/hotelindigo/hotels/tw/zh/qingdao/taohu/hoteldetail"
-      },
-      {
-        id: "zhanqiao",
-        title: "棧橋（回瀾閣）",
-        lat: 36.0613,
-        lng: 120.3200,
-        imageUrl: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain",
-        description: "1892年建。回瀾閣是青島啤酒標誌原型。",
-        photoSpot: "📸 拍照點：長廊中段往回瀾閣拍，或退到第六海濱浴場拍棧橋全景。",
-        link: "https://zh.wikipedia.org/zh-tw/%E6%A0%88%E6%A1%A5_(%E9%9D%92%E5%B2%9B)"
-      },
-      {
-        id: "church",
-        title: "青島天主教堂",
-        lat: 36.0713,
-        lng: 120.3208,
-        imageUrl: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg",
-        description: "1934年落成的哥德式雙塔建築。",
-        photoSpot: "📸 拍照點：教堂前廣場斜對角角度，可拍出建築宏偉感。",
-        link: "https://zh.wikipedia.org/zh-tw/%E5%9C%A3%E5%BC%A5%E9%A2%9D%E5%B0%94%E4%B8%BB%E6%95%99%E5%BA%A7%E5%A0%82_(%E9%9D%92%E5%B2%9B)"
-      },
-      {
-        id: "zhongshan-road",
-        title: "中山路老街",
-        lat: 36.0700,
-        lng: 120.3235,
-        imageUrl: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg",
-        description: "百年商業街，保留大量老建築與里院文化。",
-        photoSpot: "📸 拍照點：夜晚燈光亮起後的復古街景，最具電影感。",
-        link: "https://baike.baidu.com/item/%E4%B8%AD%E5%B1%B1%E8%B7%AF/10006"
-      },
-      {
-        id: "ship-dumpling",
-        title: "船歌魚水餃",
-        lat: 36.0690,
-        lng: 120.3245,
-        imageUrl: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg",
-        description: "招牌墨魚水餃是必嚐特色美食。",
-        photoSpot: "📸 拍照點：切開後的黑白墨魚水餃斷面，視覺感強烈。",
-        link: "http://www.chuange.cn/"
-      },
-      {
-        id: "liu-seafood",
-        title: "劉氏海鮮燒烤",
-        lat: 36.0730,
-        lng: 120.3260,
-        imageUrl: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg",
-        description: "在地人推崇的平價海鮮與燒烤。",
-        photoSpot: "📸 拍照點：澎湃的海鮮大拼盤與滿杯的原漿啤酒。",
-        link: "https://www.dianping.com/shop/G6P8I2H3f6m0v7K1"
-      },
-      {
-        id: "beer-house",
-        title: "青島啤酒館",
-        lat: 36.0745,
-        lng: 120.3250,
-        imageUrl: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png",
-        description: "感受這座城市最具代表性的啤酒文化。",
-        photoSpot: "📸 拍照點：戶外座位的原木酒桶與大杯紮啤。",
-        link: "https://www.tsingtaomuseum.com/"
-      },
-      {
-        id: "cafe-1907",
-        title: "1907 咖啡館",
-        lat: 36.0645,
-        lng: 120.3220,
-        imageUrl: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg",
-        description: "原德國水兵俱樂部舊址，極具電影藝術氣息。",
-        photoSpot: "📸 拍照點：百年木質旋轉樓梯，是文青必拍點。",
-        link: "https://zh.wikipedia.org/zh-tw/%E9%9D%92%E5%B2%9B%E5%BE%B7%E5%9B%BD%E6%B0%B4%E5%85%B5%E4%BF%B1%E4%B9%90%E9%83%A8%E6%97%A7%E5%9D%80"
-      },
-      {
-        id: "german-bakery",
-        title: "德國麵包房",
-        lat: 36.0680,
-        lng: 120.3215,
-        imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10",
-        description: "紮實德式口味，老城區飄散百年的麥香。",
-        photoSpot: "📸 拍照點：傳統木櫥窗與陳列整齊的鹼水結麵包。",
-        link: "https://www.dianping.com/shop/G6P8I2H3f6m0v7K1"
-      }
-    ];
+<div id="overlay" onclick="closeModal()"></div>
+<div id="modal">
+  <h3 style="margin-top:0">📸 現場足跡紀錄</h3>
+  <img id="preview-img">
+  <div id="sync-ui" class="sync-status">正在上傳雲端...</div>
+  
+  <input type="text" id="m-title" placeholder="景點名稱">
+  <textarea id="m-desc" rows="3" placeholder="寫下現在的心情..."></textarea>
+  
+  <label style="display:block; margin-bottom:15px; padding:10px; background:#f8f9fa; border:1px dashed #ccc; text-align:center; border-radius:6px; cursor:pointer;">
+    <span id="file-status">選取照片或拍照</span>
+    <input type="file" id="m-file" accept="image/*" style="display:none;" onchange="handlePreview(this)">
+  </label>
 
-    let map, infoWindow;
+  <div style="display:flex; gap:10px;">
+    <button id="save-btn" onclick="uploadAndSave()" style="flex:2; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:bold;">確認儲存</button>
+    <button onclick="closeModal()" style="flex:1; background:#eee; border:none; border-radius:8px;">取消</button>
+  </div>
+</div>
 
-    function initMap() {
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 36.0675, lng: 120.3220 },
-        zoom: 15,
-        gestureHandling: "greedy"
+<script>
+  // Cloudinary 設定
+  const CLOUD_NAME = "dnwwaush7"; 
+  const UPLOAD_PRESET = "Guidebook";
+  
+  // 1. 回復原本的所有景點資料
+  const defaultPlaces = [
+    { title: "青島英迪格酒店", lat: 36.0665, lng: 120.3205, img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600", desc: "融合里院文化與時尚設計，可俯瞰老城區紅瓦綠樹。" },
+    { title: "棧橋（回瀾閣）", lat: 36.0613, lng: 120.3200, img: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", desc: "1892年建，青島標誌。盡頭的回瀾閣是青島啤酒標誌原型。" },
+    { title: "青島天主教堂", lat: 36.0713, lng: 120.3208, img: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", desc: "聖彌額爾大教堂，1934年落成的哥德式地標建築。" },
+    { title: "中山路老街", lat: 36.0700, lng: 120.3235, img: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg", desc: "百年商業街，保留大量德式建築與傳統里院。" },
+    { title: "船歌魚水餃", lat: 36.0690, lng: 120.3245, img: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg", desc: "青島特色美食，招牌墨魚水餃必嚐。" },
+    { title: "劉氏海鮮燒烤", lat: 36.0730, lng: 120.3260, img: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg", desc: "在地知名海鮮店，提供當季新鮮平價海產。" },
+    { title: "青島啤酒館", lat: 36.0745, lng: 120.3250, img: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png", desc: "體驗「啤酒之都」的文化，品嚐最新鮮的原漿啤酒。" },
+    { title: "1907 咖啡館", lat: 36.0645, lng: 120.3220, img: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg", desc: "原德國水兵俱樂部，中國第一家電影院所在地。" },
+    { title: "德國麵包房", lat: 36.0680, lng: 120.3215, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", desc: "保留傳統德式烘焙技術，鹼水結與黑麥麵包極具特色。" }
+  ];
+
+  let map, infoWindow, userPos = { lat: 36.0675, lng: 120.3220 }, fileToUpload = null;
+
+  function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: userPos,
+      zoom: 15,
+      gestureHandling: "greedy",
+      disableDefaultUI: true
+    });
+    infoWindow = new google.maps.InfoWindow();
+    updateLocation();
+    renderAll();
+  }
+
+  function updateLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(p => {
+        userPos = { lat: p.coords.latitude, lng: p.coords.longitude };
+        map.setCenter(userPos);
+      }, null, { enableHighAccuracy: true });
+    }
+  }
+
+  function handlePreview(input) {
+    fileToUpload = input.files[0];
+    if (fileToUpload) {
+      document.getElementById('file-status').innerText = "✅ 照片已就緒";
+      const pre = document.getElementById('preview-img');
+      pre.src = URL.createObjectURL(fileToUpload);
+      pre.style.display = 'block';
+    }
+  }
+
+  async function uploadAndSave() {
+    const title = document.getElementById('m-title').value;
+    if (!title || !fileToUpload) return alert("請輸入名稱並選取照片");
+    
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; document.getElementById('sync-ui').style.display = 'block';
+
+    const fd = new FormData();
+    fd.append('file', fileToUpload);
+    fd.append('upload_preset', UPLOAD_PRESET);
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      
+      const record = {
+        title, isUser: true,
+        desc: document.getElementById('m-desc').value,
+        img: data.secure_url,
+        lat: userPos.lat, lng: userPos.lng,
+        time: new Date().toLocaleDateString()
+      };
+
+      const history = JSON.parse(localStorage.getItem('white6_trip_records') || "[]");
+      history.unshift(record);
+      localStorage.setItem('white6_trip_records', JSON.stringify(history));
+      
+      renderAll();
+      closeModal();
+    } catch (e) { alert("上傳失敗"); }
+    finally { btn.disabled = false; document.getElementById('sync-ui').style.display = 'none'; }
+  }
+
+  function renderAll() {
+    const list = document.getElementById('place-list');
+    list.innerHTML = "";
+    const history = JSON.parse(localStorage.getItem('white6_trip_records') || "[]");
+    
+    // 合併資料：使用者紀錄排在最上面
+    const all = [...history, ...defaultPlaces];
+
+    all.forEach(p => {
+      const marker = new google.maps.Marker({ position: { lat: p.lat, lng: p.lng }, map });
+      marker.addListener("click", () => {
+        infoWindow.setContent(`
+          <div style="max-width:180px">
+            <img src="${p.img}" style="width:100%; border-radius:6px; margin-bottom:5px;">
+            <h4 style="margin:0">${p.title}</h4>
+            <p style="font-size:11px; color:#555; line-height:1.3;">${p.desc}</p>
+          </div>`);
+        infoWindow.open(map, marker);
       });
-      infoWindow = new google.maps.InfoWindow();
-      renderMarkers();
-      renderSidebar();
-    }
 
-    function renderMarkers() {
-      places.forEach(place => {
-        const marker = new google.maps.Marker({ position: { lat: place.lat, lng: place.lng }, map });
-        marker.addListener("click", () => openInfoWindow(place, marker));
-        place._marker = marker;
-      });
-    }
+      const card = document.createElement('div');
+      card.className = `place-card ${p.isUser ? 'user-added' : ''}`;
+      card.innerHTML = `
+        <img src="${p.img}">
+        <div class="card-info">
+          <h3>${p.title}</h3>
+          <p>${p.desc.substring(0,25)}...</p>
+          ${p.time ? `<small>📍 紀錄於 ${p.time}</small>` : ''}
+        </div>`;
+      card.onclick = () => {
+        map.panTo({lat:p.lat, lng:p.lng});
+        google.maps.event.trigger(marker, 'click');
+        if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      list.appendChild(card);
+    });
+  }
 
-    function openInfoWindow(place, marker) {
-      const content = `
-        <div class="info-box">
-          <div class="photo-spot-tag">${place.photoSpot}</div>
-          <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
-          <img src="${place.imageUrl}" referrerpolicy="no-referrer" style="width:100%; height:130px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
-          <p style="margin:0; font-size:12px; color:#555; line-height:1.4;">${place.description}</p>
-          <a href="${place.link}" target="_blank" class="info-btn">📚 閱讀深度背景</a>
-        </div>
-      `;
-      infoWindow.setContent(content);
-      infoWindow.open(map, marker);
-      map.panTo(marker.getPosition());
-    }
-
-    function renderSidebar() {
-      const listEl = document.getElementById("place-list");
-      places.forEach(place => {
-        const item = document.createElement("div");
-        item.className = "place";
-        item.innerHTML = `
-          <img src="${place.imageUrl}" referrerpolicy="no-referrer">
-          <div class="place-info">
-            <h3>${place.title}</h3>
-            <p>${place.description}</p>
-            <div class="photo-hint">${place.photoSpot}</div>
-          </div>
-        `;
-        item.addEventListener("click", () => {
-          openInfoWindow(place, place._marker);
-          if (window.innerWidth <= 768) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        });
-        listEl.appendChild(item);
-      });
-    }
-  </script>
-  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
+  function openModal() { updateLocation(); document.getElementById('modal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; }
+  function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; document.getElementById('preview-img').style.display = 'none'; fileToUpload = null; }
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
 </body>
 </html>
