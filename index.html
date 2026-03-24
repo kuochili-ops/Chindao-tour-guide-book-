@@ -2,7 +2,8 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>青島老城實景導覽地圖</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>青島老城實景導覽</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", sans-serif;
@@ -10,137 +11,72 @@
       display: flex;
       height: 100vh;
       background-color: #f8f9fa;
+      flex-direction: row; /* 預設橫向排列 */
     }
-    #map { flex: 2; height: 100%; }
+
+    #map { flex: 2; height: 100%; width: 100%; }
+
     #sidebar {
       flex: 1;
       max-width: 400px;
-      padding: 20px;
+      padding: 15px;
       overflow-y: auto;
       border-left: 1px solid #ddd;
       background: white;
     }
+
+    /* 手機版 RWD 調整：將地圖與清單改為上下排列 */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      #map { flex: none; height: 50vh; } /* 地圖佔一半螢幕 */
+      #sidebar { max-width: 100%; flex: 1; border-left: none; border-top: 1px solid #ddd; }
+      h2 { font-size: 20px; } /* 確保標題大小適中 */
+    }
+
     .place {
       display: flex;
       gap: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       padding: 10px;
       border-radius: 8px;
       cursor: pointer;
-      transition: background 0.2s;
-      border: 1px solid transparent;
+      background: #fff;
+      border: 1px solid #eee;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .place:hover {
-      background-color: #f0f7ff;
-      border-color: #cce5ff;
-    }
+
     .place img {
-      width: 80px;
-      height: 80px;
+      width: 70px;
+      height: 70px;
       object-fit: cover;
       border-radius: 6px;
       flex-shrink: 0;
     }
-    .place-info h3 {
-      margin: 0 0 4px;
-      font-size: 16px;
-      color: #0056b3;
-    }
-    .place-info p {
-      margin: 0;
-      font-size: 13px;
-      color: #666;
-      line-height: 1.4;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    h2 { color: #333; margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
+
+    .place-info h3 { margin: 0 0 4px; font-size: 16px; color: #0056b3; }
+    .place-info p { margin: 0; font-size: 14px; color: #444; line-height: 1.4; }
+
+    h2 { color: #333; margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 8px; font-size: 18px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="sidebar">
-    <h2>青島景點實景導覽</h2>
-    <p style="font-size: 13px; color: #888; margin-bottom: 20px;">點選下方景點或地圖標記查看實景。</p>
+    <h2>青島老城導覽</h2>
     <div id="place-list"></div>
   </div>
 
   <script>
     const places = [
-      {
-        id: "indigo",
-        title: "青島英迪格酒店 Hotel Indigo",
-        lat: 36.0665,
-        lng: 120.3205,
-        imageUrl: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600",
-        description: "位於老城區核心，融合了青島里院文化與時尚設計的精品酒店。"
-      },
-      {
-        id: "zhanqiao",
-        title: "棧橋（回瀾閣）",
-        lat: 36.0613,
-        lng: 120.3200,
-        imageUrl: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain",
-        description: "青島百年的地標，回瀾閣在海浪簇擁下守護著這座海港城市。"
-      },
-      {
-        id: "church",
-        title: "青島天主教堂",
-        lat: 36.0713,
-        lng: 120.3208,
-        imageUrl: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg",
-        description: "德式雙塔建築，是青島老城區最受歡迎的婚紗拍攝與觀光地標。"
-      },
-      {
-        id: "zhongshan-road",
-        title: "中山路老街",
-        lat: 36.0700,
-        lng: 120.3235,
-        imageUrl: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg",
-        description: "歷史悠久的商業老街，近年翻修後展現出復古與現代交織的新魅力。"
-      },
-      {
-        id: "ship-dumpling",
-        title: "船歌魚水餃",
-        lat: 36.0690,
-        lng: 120.3245,
-        imageUrl: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg",
-        description: "鮮甜的海味包裹在Ｑ彈皮內，墨魚水餃是來青島必嚐的味蕾驚喜。"
-      },
-      {
-        id: "liu-seafood",
-        title: "劉氏海鮮燒烤",
-        lat: 36.0730,
-        lng: 120.3260,
-        imageUrl: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg",
-        description: "超澎湃的海鮮拼盤！炭火現烤出的鮮美滋味，搭配青島啤酒簡直是絕配。"
-      },
-      {
-        id: "beer-house",
-        title: "青島啤酒館",
-        lat: 36.0745,
-        lng: 120.3250,
-        imageUrl: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png",
-        description: "在這裡可以喝到最新鮮的原漿啤酒，深入體會這座城市的微醺日常。"
-      },
-      {
-        id: "cafe-1907",
-        title: "1907 咖啡館",
-        lat: 36.0645,
-        lng: 120.3220,
-        imageUrl: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg",
-        description: "在百年古蹟「德國水兵俱樂部」中品嚐咖啡，時光在此緩緩流轉。"
-      },
-      {
-        id: "german-bakery",
-        title: "德國麵包房 German Bakery",
-        lat: 36.0680,
-        lng: 120.3215,
-        imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10",
-        description: "紮實厚重的德式風味，麥香十足，是老城區裡飄散百年的異國香氣。"
-      }
+      { id: "indigo", title: "青島英迪格酒店", lat: 36.0665, lng: 120.3205, imageUrl: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600", description: "融合里院文化與時尚設計的精品酒店。" },
+      { id: "zhanqiao", title: "棧橋（回瀾閣）", lat: 36.0613, lng: 120.3200, imageUrl: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", description: "青島百年地標，守護海港的建築瑰寶。" },
+      { id: "church", title: "青島天主教堂", lat: 36.0713, lng: 120.3208, imageUrl: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", description: "德式雙塔建築，老城區最受歡迎的觀光點。" },
+      { id: "zhongshan-road", title: "中山路老街", lat: 36.0700, lng: 120.3235, imageUrl: "https://www.news.cn/ci/20240821/69d02dd48a3c4ad590362e645da37368/2024082169d02dd48a3c4ad590362e645da37368_20240819806e536a813d4601b5d09a3259e08258.jpeg", description: "歷史悠久的商業街，展現復古新魅力。" },
+      { id: "ship-dumpling", title: "船歌魚水餃", lat: 36.0690, lng: 120.3245, imageUrl: "https://icrvb3jy.xinmedia.com/solomo/article/E/5/D/E5D25FD2-42B0-9684-16F1-F90783611D50.jpeg", description: "鮮美海味包裹在Ｑ彈皮內，墨魚水餃必嚐。" },
+      { id: "liu-seafood", title: "劉氏海鮮燒烤", lat: 36.0730, lng: 120.3260, imageUrl: "https://followmii.tw/wp-content/uploads/2024/09/batch_PXL_20240919_103113614-1.jpg", description: "澎湃海鮮拼盤，搭配青島啤酒絕配。" },
+      { id: "beer-house", title: "青島啤酒館", lat: 36.0745, lng: 120.3250, imageUrl: "https://qp-bowuguan-web.oss-cn-qingdao.aliyuncs.com/2025/3/28/1905511455555047425.png", description: "提供最新鮮的原漿啤酒，深入體會微醺日常。" },
+      { id: "cafe-1907", title: "1907 咖啡館", lat: 36.0645, lng: 120.3220, imageUrl: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg", description: "在德國水兵俱樂部舊址品嚐時光的滋味。" },
+      { id: "german-bakery", title: "德國麵包房", lat: 36.0680, lng: 120.3215, imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", description: "紮實德式風味，老城區飄散百年的麥香。" }
     ];
 
     let map, infoWindow;
@@ -148,7 +84,8 @@
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 36.0675, lng: 120.3220 },
-        zoom: 15
+        zoom: 15,
+        gestureHandling: "greedy" // 手機操作更順暢
       });
       infoWindow = new google.maps.InfoWindow();
       renderMarkers();
@@ -157,11 +94,7 @@
 
     function renderMarkers() {
       places.forEach(place => {
-        const marker = new google.maps.Marker({
-          position: { lat: place.lat, lng: place.lng },
-          map,
-          title: place.title
-        });
+        const marker = new google.maps.Marker({ position: { lat: place.lat, lng: place.lng }, map });
         marker.addListener("click", () => openInfoWindow(place, marker));
         place._marker = marker;
       });
@@ -169,10 +102,10 @@
 
     function openInfoWindow(place, marker) {
       const content = `
-        <div style="max-width:240px; padding:5px;">
-          <h3 style="margin:0 0 8px; font-size:16px;">${place.title}</h3>
-          <img src="${place.imageUrl}" referrerpolicy="no-referrer" style="width:100%; height:140px; object-fit:cover; border-radius:6px; margin-bottom:8px;" />
-          <p style="margin:0; font-size:13px; color:#555; line-height:1.4;">${place.description}</p>
+        <div style="max-width:200px;">
+          <h3 style="margin:0 0 5px; font-size:16px;">${place.title}</h3>
+          <img src="${place.imageUrl}" referrerpolicy="no-referrer" style="width:100%; height:110px; object-fit:cover; border-radius:4px; margin-bottom:5px;" />
+          <p style="margin:0; font-size:13px; color:#444;">${place.description}</p>
         </div>
       `;
       infoWindow.setContent(content);
@@ -192,12 +125,15 @@
             <p>${place.description}</p>
           </div>
         `;
-        item.addEventListener("click", () => openInfoWindow(place, place._marker));
+        item.addEventListener("click", () => {
+          openInfoWindow(place, place._marker);
+          // 點擊後滾動回地圖視窗（手機版友善）
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
         listEl.appendChild(item);
       });
     }
   </script>
-
   <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
 </body>
 </html>
