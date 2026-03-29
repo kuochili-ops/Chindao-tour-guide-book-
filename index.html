@@ -1,247 +1,165 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>青島足跡 - White 6 紀錄管理版</title>
-  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
-  <style>
-    body { font-family: -apple-system, sans-serif; margin: 0; display: flex; height: 100vh; flex-direction: row; background: #f8f9fa; }
-    #map-container { flex: 2; position: relative; height: 100%; }
-    #map { height: 100%; width: 100%; }
-    #sidebar { flex: 1; max-width: 420px; padding: 15px; overflow-y: auto; border-left: 1px solid #ddd; background: white; }
-    @media (max-width: 768px) { body { flex-direction: column; } #map-container { flex: none; height: 40vh; } #sidebar { max-width: 100%; flex: 1; } }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-    .add-btn { background: #007bff; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-    .loc-btn { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10; border: none; }
-    
-    .place-card { position: relative; display: flex; gap: 12px; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px; cursor: pointer; background: #fff; }
-    .place-card img { width: 85px; height: 85px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
-    .user-record { border-left: 5px solid #28a745; }
-    
-    .edit-btn { position: absolute; top: 10px; right: 10px; background: #f0f0f0; color: #007bff; font-size: 11px; padding: 4px 8px; border-radius: 5px; font-weight: bold; border: 1px solid #ccc; }
-    
-    .card-info h3 { margin: 0 45px 0 0; font-size: 16px; color: #0056b3; }
-    .card-info p { margin: 5px 0; font-size: 12px; color: #666; line-height: 1.4; }
-    .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e9ecef; color: #495057; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>𓃥 白六快傳地圖 - 多圖收合版</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --primary-color: #2d5a27; --bg-color: #f4f4f2; }
+        body { font-family: sans-serif; margin: 0; background: var(--bg-color); }
+        #map { height: 75vh; width: 100%; }
+        .controls { padding: 15px; display: flex; gap: 10px; justify-content: center; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        
+        /* 自定義數字標籤樣式 */
+        .custom-pin { position: relative; }
+        .pin-count {
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            background: #ff3b30;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1.5px solid white;
+            white-space: nowrap;
+        }
 
-    #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 380px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); z-index: 1001; }
-    #modal input, #modal textarea { width: 100%; margin-bottom: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
-    #preview { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: none; }
-    .info-text { font-size: 11px; color: #28a745; margin-bottom: 10px; }
-  </style>
+        /* 收合元件樣式 */
+        details {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 5px;
+            background: #f9f9f9;
+        }
+        summary {
+            padding: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            outline: none;
+            color: var(--primary-color);
+        }
+        .item-content { padding: 8px; border-top: 1px solid #ddd; }
+        .item-content img { width: 100%; border-radius: 4px; margin-bottom: 5px; }
+        .item-text { font-size: 13px; color: #333; line-height: 1.4; }
+
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-export { background-color: var(--primary-color); color: white; }
+        .btn-import { background-color: #4a90e2; color: white; }
+    </style>
 </head>
 <body>
 
-<div id="map-container">
-  <div id="map"></div>
-  <button class="loc-btn" onclick="centerOnUser()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#007bff"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></button>
+<div id="map"></div>
+<div class="controls">
+    <button class="btn btn-export" onclick="exportData()">📤 匯出景點檔</button>
+    <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">📥 匯入檔案</button>
+    <input type="file" id="fileInput" accept=".json" onchange="importData(event)">
 </div>
 
-<div id="sidebar">
-  <div class="header">
-    <h2 style="margin:0; font-size: 18px;">青島足跡導覽</h2>
-    <button class="add-btn" onclick="openModal()">📸 紀錄足跡</button>
-  </div>
-  <div id="place-list"></div>
-</div>
-
-<div id="overlay" onclick="closeModal()"></div>
-<div id="modal">
-  <h3 id="modal-title">📸 景點紀錄</h3>
-  <img id="preview">
-  <div id="file-info" class="info-text"></div>
-  <input type="text" id="m-title" placeholder="景點名稱 (如: 棧橋海邊)">
-  <textarea id="m-desc" rows="2" placeholder="紀錄此刻的心情或小提醒..."></textarea>
-  <input type="file" id="m-file" accept="image/*" onchange="handleFile(this)">
-  
-  <div id="edit-mode-tools" style="display:none; border-top:1px solid #eee; padding-top:10px; margin-top:10px;">
-    <button onclick="deleteCurrent()" style="width:100%; padding:8px; background:none; color:#dc3545; border:1px solid #dc3545; border-radius:8px; font-size:12px;">🗑 刪除此景點紀錄</button>
-  </div>
-
-  <div style="display:flex; gap:10px; margin-top:15px;">
-    <button id="save-btn" onclick="processSave()" style="flex:2; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:bold;">確認儲存</button>
-    <button onclick="closeModal()" style="flex:1; background:#eee; border:none; border-radius:8px;">取消</button>
-  </div>
-</div>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const CLOUD_NAME = "dnwwaush7"; 
-  const UPLOAD_PRESET = "Guidebook";
-  const DB_KEY = 'white6_qingdao_final_v5';
+    const map = L.map('map').setView([25.0330, 121.5654], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-  const defaultPlaces = [
-    { title: "青島英迪格酒店", lat: 36.0665, lng: 120.3205, img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600", desc: "融合里院文化與時尚設計。" },
-    { title: "棧橋 (回瀾閣)", lat: 36.0613, lng: 120.3200, img: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", desc: "百年棧橋，青島地標。" },
-    { title: "青島天主教堂", lat: 36.0713, lng: 120.3208, img: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", desc: "宏偉的德式雙塔建築。" },
-    { title: "1907 咖啡館", lat: 36.0645, lng: 120.3220, img: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg", desc: "中國第一家電影院所在地。" },
-    { title: "德國麵包房", lat: 36.0680, lng: 120.3215, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", desc: "隱藏在巷弄中的正宗德式烘焙。" }
-  ];
+    // 範例資料：同一個地點(台北101)有兩筆內容
+    let allPoints = [
+        { lat: 25.0330, lng: 121.5654, title: "台北101 - 白天", note: "天氣超好！", imageUrl: "https://images.unsplash.com/photo-1552912112-96538d58a8a4?w=300" },
+        { lat: 25.0330, lng: 121.5654, title: "台北101 - 煙火", note: "跨年人超多", imageUrl: "https://images.unsplash.com/photo-1533230408708-8f9f91d1235a?w=300" },
+        { lat: 25.0408, lng: 121.5602, title: "國父紀念館", note: "散步好地方", imageUrl: "https://images.unsplash.com/photo-1571474134403-9993309a4441?w=300" }
+    ];
 
-  let map, infoWindow, userMarker, userLatLng = { lat: 36.0675, lng: 120.3220 }, uploadFile = null, extractedInfo = { lat:null, lng:null, time:null }, editingId = null;
+    let markersLayer = L.layerGroup().addTo(map);
 
-  function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
-      center: userLatLng, zoom: 16, gestureHandling: "greedy", mapTypeControl: false, zoomControl: false
-    });
-    infoWindow = new google.maps.InfoWindow();
-
-    userMarker = new google.maps.Marker({
-      position: userLatLng, map: map,
-      icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "white", rotation: 0 }
-    });
-
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(p => {
-        userLatLng = { lat: p.coords.latitude, lng: p.coords.longitude };
-        userMarker.setPosition(userLatLng);
-      }, null, { enableHighAccuracy: true });
-    }
-    renderAll();
-  }
-
-  function centerOnUser() { map.panTo(userLatLng); }
-
-  async function handleFile(input) {
-    uploadFile = input.files[0];
-    if (!uploadFile) return;
-
-    document.getElementById('preview').src = URL.createObjectURL(uploadFile);
-    document.getElementById('preview').style.display = 'block';
-    
-    try {
-      // 同時讀取 GPS 與 時間 (Exif)
-      const data = await exifr.parse(uploadFile);
-      const gps = await exifr.gps(uploadFile);
-      
-      extractedInfo.lat = gps ? gps.latitude : null;
-      extractedInfo.lng = gps ? gps.longitude : null;
-      extractedInfo.time = data.DateTimeOriginal ? new Date(data.DateTimeOriginal).toLocaleString() : new Date().toLocaleString();
-
-      document.getElementById('file-info').innerHTML = `
-        📍 座標: ${extractedInfo.lat ? '已成功讀取' : '無 (使用目前位置)'}<br>
-        ⏰ 時間: ${extractedInfo.time}`;
-      document.getElementById('file-info').style.display = 'block';
-    } catch (e) { console.error(e); }
-  }
-
-  async function processSave() {
-    const title = document.getElementById('m-title').value;
-    if (!title) return alert("請輸入景點名稱");
-
-    const btn = document.getElementById('save-btn');
-    btn.innerText = "同步中..."; btn.disabled = true;
-
-    let finalImg = document.getElementById('preview').src;
-    let history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-
-    // 只有在更換照片時才上傳雲端
-    if (uploadFile) {
-      const fd = new FormData();
-      fd.append('file', uploadFile);
-      fd.append('upload_preset', UPLOAD_PRESET);
-      try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
-        const data = await res.json();
-        finalImg = data.secure_url;
-      } catch (e) { alert("上傳失敗"); }
+    // 核心邏輯：依照經緯度將資料分組
+    function groupByLocation(data) {
+        const groups = {};
+        data.forEach(item => {
+            const key = `${item.lat}_${item.lng}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(item);
+        });
+        return groups;
     }
 
-    const record = {
-      id: editingId || Date.now(),
-      isUser: true, title,
-      desc: document.getElementById('m-desc').value,
-      img: finalImg,
-      lat: (editingId && !uploadFile) ? history.find(i=>i.id===editingId).lat : (extractedInfo.lat || userLatLng.lat),
-      lng: (editingId && !uploadFile) ? history.find(i=>i.id===editingId).lng : (extractedInfo.lng || userLatLng.lng),
-      time: (editingId && !uploadFile) ? history.find(i=>i.id===editingId).time : (extractedInfo.time || new Date().toLocaleString())
-    };
+    function renderAll() {
+        markersLayer.clearLayers();
+        const groups = groupByLocation(allPoints);
+        const bounds = L.latLngBounds();
 
-    if (editingId) {
-      history = history.map(h => h.id === editingId ? record : h);
-    } else {
-      history.unshift(record);
+        Object.values(groups).forEach(points => {
+            const first = points[0];
+            const count = points.length;
+
+            // 自定義綠色針加上數字
+            const customIcon = L.divIcon({
+                className: 'custom-pin',
+                html: `
+                    <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png" style="width:25px">
+                    ${count > 1 ? `<span class="pin-count">${count}</span>` : ''}
+                `,
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34]
+            });
+
+            // 建立 Popup 內容：使用 details/summary 實現收合
+            let popupHtml = `<div style="width:220px"><strong>📍 共有 ${count} 筆紀錄</strong>`;
+            
+            points.forEach((p, index) => {
+                popupHtml += `
+                    <details ${index === 0 ? 'open' : ''}>
+                        <summary>${p.title}</summary>
+                        <div class="item-content">
+                            <img src="${p.imageUrl}">
+                            <div class="item-text">${p.note}</div>
+                        </div>
+                    </details>
+                `;
+            });
+            popupHtml += `</div>`;
+
+            const marker = L.marker([first.lat, first.lng], { icon: customIcon });
+            marker.bindPopup(popupHtml);
+            markersLayer.addLayer(marker);
+            bounds.extend([first.lat, first.lng]);
+        });
+
+        if (allPoints.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
     }
 
-    localStorage.setItem(DB_KEY, JSON.stringify(history));
     renderAll();
-    closeModal();
-    btn.innerText = "確認儲存"; btn.disabled = false;
-  }
 
-  function openEdit(id, e) {
-    e.stopPropagation();
-    const history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-    const item = history.find(i => i.id === id);
-    if (!item) return;
+    // 匯出功能
+    function exportData() {
+        const dataStr = JSON.stringify(allPoints, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `White6_Map_Data.json`;
+        a.click();
+    }
 
-    editingId = id;
-    document.getElementById('modal-title').innerText = "✎ 修改景點紀錄";
-    document.getElementById('m-title').value = item.title;
-    document.getElementById('m-desc').value = item.desc;
-    document.getElementById('preview').src = item.img;
-    document.getElementById('preview').style.display = 'block';
-    document.getElementById('file-info').innerHTML = `⏰ 紀錄時間: ${item.time}`;
-    document.getElementById('edit-mode-tools').style.display = 'block';
-    document.getElementById('modal').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
-  }
-
-  function deleteCurrent() {
-    if (!confirm("確定要刪除這筆紀錄嗎？照片將不會從地圖上顯示。")) return;
-    let history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-    history = history.filter(h => h.id !== editingId);
-    localStorage.setItem(DB_KEY, JSON.stringify(history));
-    renderAll();
-    closeModal();
-  }
-
-  function renderAll() {
-    const list = document.getElementById('place-list');
-    list.innerHTML = "";
-    const history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-    const all = [...history, ...defaultPlaces];
-
-    all.forEach(p => {
-      const marker = new google.maps.Marker({ position: { lat: p.lat, lng: p.lng }, map });
-      marker.addListener("click", () => {
-        infoWindow.setContent(`<div style="max-width:200px"><img src="${p.img}" style="width:100%;border-radius:6px;"><h4 style="margin:5px 0">${p.title}</h4><p style="font-size:12px;color:#666">${p.desc}</p><small style="color:#999">${p.time || ''}</small></div>`);
-        infoWindow.open(map, marker);
-      });
-      const card = document.createElement('div');
-      card.className = `place-card ${p.isUser ? 'user-record' : ''}`;
-      card.innerHTML = `
-        <img src="${p.img}">
-        <div class="card-info">
-          <h3>${p.title}</h3>
-          <p>${p.desc.substring(0,25)}...</p>
-          <span class="tag">${p.time ? '📍 ' + p.time : '🚩 導覽景點'}</span>
-          ${p.isUser ? `<div class="edit-btn" onclick="openEdit(${p.id}, event)">編輯</div>` : ''}
-        </div>`;
-      card.onclick = () => { map.panTo({lat:p.lat, lng:p.lng}); google.maps.event.trigger(marker, 'click'); };
-      list.appendChild(card);
-    });
-  }
-
-  function openModal() {
-    editingId = null; uploadFile = null; extractedInfo = { lat:null, lng:null, time:null };
-    document.getElementById('modal-title').innerText = "📸 紀錄新足跡";
-    document.getElementById('m-title').value = "";
-    document.getElementById('m-desc').value = "";
-    document.getElementById('preview').style.display = 'none';
-    document.getElementById('file-info').style.display = 'none';
-    document.getElementById('edit-mode-tools').style.display = 'none';
-    document.getElementById('modal').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
-  }
-  function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
+    // 匯入功能 (保留原本資料，僅增加新點)
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                // 這裡可以選擇是否過濾完全相同的內容，目前設定為直接合併
+                allPoints = allPoints.concat(imported);
+                renderAll();
+                alert("匯入成功！已整合新舊景點。");
+            } catch (err) { alert("讀取失敗"); }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
 </script>
-<script async src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
-</body>
-</html>
-
-<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
 </body>
 </html>
