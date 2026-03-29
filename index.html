@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>青島足跡 - White 6 編輯導覽版</title>
+  <title>青島足跡 - White 6 座標自動讀取版</title>
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
   <style>
     body { font-family: -apple-system, sans-serif; margin: 0; display: flex; height: 100vh; flex-direction: row; background: #f8f9fa; }
     #map-container { flex: 2; position: relative; height: 100%; }
@@ -13,27 +14,21 @@
     
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
     .add-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-    
-    /* 定位按鈕 */
     .loc-btn { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; z-index: 10; border: none; }
     .loc-btn svg { width: 24px; height: 24px; fill: #007bff; }
 
     .place-card { position: relative; display: flex; gap: 12px; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px; cursor: pointer; background: #fff; }
     .place-card img { width: 85px; height: 85px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
     .user-record { border-left: 5px solid #28a745; }
-    
-    /* 編輯按鈕 */
     .edit-badge { position: absolute; top: 10px; right: 10px; background: #f8f9fa; color: #007bff; font-size: 11px; padding: 4px 8px; border-radius: 5px; border: 1px solid #ddd; font-weight: bold; }
-    
     .card-info h3 { margin: 0 40px 0 0; font-size: 16px; color: #0056b3; }
-    .card-info p { margin: 5px 0; font-size: 12px; color: #666; line-height: 1.4; }
     .tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e9ecef; color: #495057; }
 
-    /* Modal */
     #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 380px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); z-index: 1001; }
     #modal input, #modal textarea { width: 100%; margin-bottom: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
     #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
     #preview { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: none; }
+    .gps-info { font-size: 11px; color: #28a745; margin-bottom: 10px; display: none; }
   </style>
 </head>
 <body>
@@ -53,16 +48,13 @@
 
 <div id="overlay" onclick="closeModal()"></div>
 <div id="modal">
-  <h3 id="modal-title">📸 現場足跡紀錄</h3>
+  <h3 id="modal-title">📸 紀錄足跡</h3>
   <img id="preview">
+  <div id="gps-status" class="gps-info">已讀取照片拍攝座標 📍</div>
   <input type="text" id="m-title" placeholder="景點名稱">
-  <textarea id="m-desc" rows="3" placeholder="描述此處的風景..."></textarea>
+  <textarea id="m-desc" rows="2" placeholder="描述此處的風景..."></textarea>
   <input type="file" id="m-file" accept="image/*" style="margin-bottom:15px;" onchange="handleFile(this)">
   
-  <div id="edit-tools" style="display:none; margin-bottom:15px;">
-    <button onclick="deleteCurrent()" style="width:100%; padding:8px; background:#fff; color:#dc3545; border:1px solid #dc3545; border-radius:8px; font-size:12px;">🗑 刪除此景點</button>
-  </div>
-
   <div style="display:flex; gap:10px;">
     <button id="save-btn" onclick="processSave()" style="flex:2; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:bold;">確認儲存</button>
     <button onclick="closeModal()" style="flex:1; background:#eee; border:none; border-radius:8px;">取消</button>
@@ -72,18 +64,17 @@
 <script>
   const CLOUD_NAME = "dnwwaush7"; 
   const UPLOAD_PRESET = "Guidebook";
-  const DB_KEY = 'white6_qingdao_v4';
+  const DB_KEY = 'white6_qingdao_gps';
 
   const defaultPlaces = [
     { title: "青島英迪格酒店", lat: 36.0665, lng: 120.3205, img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600", desc: "融合里院文化與時尚設計。" },
-    { title: "棧橋 (回瀾閣)", lat: 36.0613, lng: 120.3200, img: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", desc: "1892年建，青島地標。" },
-    { title: "青島天主教堂", lat: 36.0713, lng: 120.3208, img: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", desc: "聖彌額爾大教堂，浪漫的哥德式建築。" },
+    { title: "棧橋 (回瀾閣)", lat: 36.0613, lng: 120.3200, img: "https://tse4.mm.bing.net/th/id/OIP.djmABa5uF4YmtevUnML2BQHaFY?pid=ImgDetMain", desc: "1892年建，青島啤酒原型所在地。" },
+    { title: "青島天主教堂", lat: 36.0713, lng: 120.3208, img: "https://www.settour.com.tw/ss_img/poi/20200819/6ddf0848-3266-49c0-a80d-1075f489d3d4.jpg", desc: "聖彌額爾大教堂，哥德式地標。" },
     { title: "1907 咖啡館", lat: 36.0645, lng: 120.3220, img: "https://ak-d.tripcdn.com/images/1mi0d224x98oyzgfvC519.jpg", desc: "中國第一家電影院所在地。" },
-    { title: "德國麵包房", lat: 36.0680, lng: 120.3215, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", desc: "隱藏在巷弄中的正宗德式烘焙。" }
-    // ... 其他 4 個景點同理
+    { title: "德國麵包房", lat: 36.0680, lng: 120.3215, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdgiT-sBtkDS8sSWe89xBbzRN5kTTljwHLC0HvzXryFMRGY_mKwq2O7NY&s=10", desc: "正宗德式烘焙，鹼水結必買。" }
   ];
 
-  let map, infoWindow, userMarker, userLatLng = { lat: 36.0675, lng: 120.3220 }, uploadFile = null, editingId = null;
+  let map, infoWindow, userMarker, userLatLng = { lat: 36.0675, lng: 120.3220 }, uploadFile = null, photoLatLng = null;
 
   function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
@@ -102,97 +93,69 @@
         userMarker.setPosition(userLatLng);
       }, null, { enableHighAccuracy: true });
     }
-
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientationabsolute', e => {
-        let heading = e.webkitCompassHeading || (360 - e.alpha);
-        if (heading) {
-          let icon = userMarker.getIcon();
-          icon.rotation = heading;
-          userMarker.setIcon(icon);
-        }
-      }, true);
-    }
     renderAll();
   }
 
-  function centerOnUser() { if (userLatLng) map.panTo(userLatLng); }
+  function centerOnUser() { map.panTo(userLatLng); }
 
-  function handleFile(input) {
+  // 核心功能：讀取照片內的 GPS 定位
+  async function handleFile(input) {
     uploadFile = input.files[0];
     if (uploadFile) {
-      const pre = document.getElementById('preview');
-      pre.src = URL.createObjectURL(uploadFile); pre.style.display = 'block';
+      document.getElementById('preview').src = URL.createObjectURL(uploadFile);
+      document.getElementById('preview').style.display = 'block';
+      
+      try {
+        // 使用 exifr 讀取座標
+        const output = await exifr.gps(uploadFile);
+        if (output && output.latitude && output.longitude) {
+          photoLatLng = { lat: output.latitude, lng: output.longitude };
+          document.getElementById('gps-status').style.display = 'block';
+          document.getElementById('gps-status').innerText = `✅ 已自動讀取拍攝位置: ${photoLatLng.lat.toFixed(4)}, ${photoLatLng.lng.toFixed(4)}`;
+        } else {
+          photoLatLng = null;
+          document.getElementById('gps-status').style.display = 'block';
+          document.getElementById('gps-status').innerText = `ℹ️ 照片無座標，將使用您目前位置`;
+          document.getElementById('gps-status').style.color = "#999";
+        }
+      } catch (e) { photoLatLng = null; }
     }
   }
 
   async function processSave() {
     const title = document.getElementById('m-title').value;
-    if (!title) return alert("請輸入名稱");
+    if (!title || !uploadFile) return alert("請輸入名稱並選擇照片");
     
     const btn = document.getElementById('save-btn');
-    btn.innerText = "處理中..."; btn.disabled = true;
+    btn.innerText = "同步中..."; btn.disabled = true;
 
-    let finalImg = document.getElementById('preview').src;
+    const fd = new FormData();
+    fd.append('file', uploadFile);
+    fd.append('upload_preset', UPLOAD_PRESET);
 
-    if (uploadFile) {
-      const fd = new FormData();
-      fd.append('file', uploadFile);
-      fd.append('upload_preset', UPLOAD_PRESET);
-      try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
-        const data = await res.json();
-        finalImg = data.secure_url;
-      } catch (e) { alert("圖片上傳失敗"); }
-    }
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      
+      // 優先權：1.照片座標 2.目前手機座標
+      const finalPos = photoLatLng || userLatLng;
 
-    let history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-    const record = {
-      id: editingId || Date.now(),
-      title, isUser: true,
-      desc: document.getElementById('m-desc').value,
-      img: finalImg,
-      lat: editingId ? history.find(i => i.id === editingId).lat : userLatLng.lat,
-      lng: editingId ? history.find(i => i.id === editingId).lng : userLatLng.lng,
-      time: editingId ? history.find(i => i.id === editingId).time : new Date().toLocaleDateString()
-    };
+      const record = {
+        id: Date.now(), isUser: true, title,
+        desc: document.getElementById('m-desc').value,
+        img: data.secure_url,
+        lat: finalPos.lat, lng: finalPos.lng,
+        time: new Date().toLocaleDateString()
+      };
 
-    if (editingId) {
-      history = history.map(h => h.id === editingId ? record : h);
-    } else {
+      const history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
       history.unshift(record);
-    }
-
-    localStorage.setItem(DB_KEY, JSON.stringify(history));
-    renderAll();
-    closeModal();
-    btn.innerText = "確認儲存"; btn.disabled = false;
-  }
-
-  function openEdit(id, e) {
-    e.stopPropagation();
-    const history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-    const item = history.find(i => i.id === id);
-    if (!item) return;
-
-    editingId = id;
-    document.getElementById('modal-title').innerText = "✎ 編輯足跡";
-    document.getElementById('m-title').value = item.title;
-    document.getElementById('m-desc').value = item.desc;
-    document.getElementById('preview').src = item.img;
-    document.getElementById('preview').style.display = 'block';
-    document.getElementById('edit-tools').style.display = 'block';
-    document.getElementById('modal').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
-  }
-
-  function deleteCurrent() {
-    if (!confirm("確定要刪除這個景點嗎？")) return;
-    let history = JSON.parse(localStorage.getItem(DB_KEY) || "[]");
-    history = history.filter(h => h.id !== editingId);
-    localStorage.setItem(DB_KEY, JSON.stringify(history));
-    renderAll();
-    closeModal();
+      localStorage.setItem(DB_KEY, JSON.stringify(history));
+      
+      renderAll();
+      closeModal();
+    } catch (e) { alert("上傳失敗"); }
+    finally { btn.innerText = "確認儲存"; btn.disabled = false; }
   }
 
   function renderAll() {
@@ -209,31 +172,23 @@
       });
       const card = document.createElement('div');
       card.className = `place-card ${p.isUser ? 'user-record' : ''}`;
-      card.innerHTML = `
-        <img src="${p.img}">
-        <div class="card-info">
-          <h3>${p.title}</h3>
-          <p>${p.desc.substring(0,30)}...</p>
-          <span class="tag">${p.time ? '📍 我的紀錄' : '🚩 導覽景點'}</span>
-          ${p.isUser ? `<div class="edit-badge" onclick="openEdit(${p.id}, event)">✎ 編輯</div>` : ''}
-        </div>`;
+      card.innerHTML = `<img src="${p.img}"><div class="card-info"><h3>${p.title}</h3><p>${p.desc.substring(0,30)}...</p><span class="tag">${p.time ? '📍 足跡紀錄' : '🚩 導覽景點'}</span></div>`;
       card.onclick = () => { map.panTo({lat:p.lat, lng:p.lng}); google.maps.event.trigger(marker, 'click'); };
       list.appendChild(card);
     });
   }
 
   function openModal() {
-    editingId = null;
-    document.getElementById('modal-title').innerText = "📸 現場足跡紀錄";
+    photoLatLng = null;
+    document.getElementById('gps-status').style.display = 'none';
     document.getElementById('m-title').value = "";
     document.getElementById('m-desc').value = "";
     document.getElementById('preview').style.display = 'none';
-    document.getElementById('edit-tools').style.display = 'none';
     document.getElementById('modal').style.display = 'block';
     document.getElementById('overlay').style.display = 'block';
   }
   function closeModal() { document.getElementById('modal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; uploadFile = null; }
 </script>
-<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqqo4xar0xJ3Z5GC-TLd4MRnsGYszCL1k&callback=initMap"></script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
 </body>
 </html>
