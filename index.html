@@ -3,53 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𓃥 白六快傳地圖 - 中型視窗解說版</title>
+    <title>𓃥 白六快傳地圖 - 智慧導航版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #2d5a27; --bg-color: #f4f4f2; --accent-blue: #4a90e2; }
         body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg-color); overflow: hidden; }
-        
         #map { height: 100vh; width: 100%; z-index: 1; }
 
-        /* 懸浮控制按鈕區 */
+        /* 懸浮控制按鈕 */
         .controls { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 10px; background: rgba(255,255,255,0.9);
             padding: 10px 20px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        /* 彈窗樣式 (中型尺寸) */
+        /* 中型彈窗 */
         #detail-modal {
-            border: none; border-radius: 12px; padding: 0; width: 80%; max-width: 600px;
-            max-height: 80vh; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            animation: fadeIn 0.3s ease;
+            border: none; border-radius: 16px; padding: 0; width: 85%; max-width: 550px;
+            max-height: 85vh; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            animation: slideUp 0.3s ease-out;
         }
-        #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        #detail-modal::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
         
         .modal-header { 
             background: var(--primary-color); color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0;
+            position: sticky; top: 0; z-index: 10;
         }
-        .modal-body { padding: 20px; overflow-y: auto; line-height: 1.6; }
-        .modal-close { 
-            background: none; border: none; color: white; font-size: 24px; cursor: pointer; 
-        }
+        .modal-body { padding: 20px; overflow-y: auto; }
+        .modal-close { background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
 
-        .wiki-iframe { width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 8px; margin-top: 15px; }
-        
-        .btn { padding: 10px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        /* 導航按鈕區 */
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
+        .nav-btn { 
+            flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; 
+            background: #fff; cursor: pointer; font-size: 13px; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .nav-btn:hover:not(:disabled) { background: #f0f7f0; border-color: var(--primary-color); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .nav-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+
+        /* 維基收合區 */
+        .wiki-section { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px; }
+        details summary { 
+            list-style: none; cursor: pointer; color: var(--accent-blue); 
+            font-weight: bold; text-align: center; padding: 8px;
+            border: 1px solid var(--accent-blue); border-radius: 6px;
+        }
+        details[open] summary { background: var(--accent-blue); color: white; margin-bottom: 10px; }
+        .wiki-iframe { width: 100%; height: 350px; border: 1px solid #ddd; border-radius: 8px; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
         .btn-export { background: var(--primary-color); color: white; }
         .btn-import { background: var(--accent-blue); color: white; }
 
-        /* 自定義 Pin 樣式 */
-        .custom-pin { position: relative; }
-        .pin-count {
-            position: absolute; top: -5px; right: -10px; background: #333; color: white;
-            border-radius: 10px; padding: 2px 6px; font-size: 11px; border: 1.5px solid white;
-        }
-
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -64,14 +73,30 @@
 
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-size: 18px; font-weight: bold;">景點介紹</span>
-        <button class="modal-close" onclick="document.getElementById('detail-modal').close()">×</button>
+        <span id="modal-title" style="font-size: 18px;">景點詳解</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
-        <div id="modal-date" style="color: #666; font-weight: bold; margin-bottom: 10px;"></div>
-        <div id="modal-note" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px;"></div>
-        <div style="font-size: 14px; color: var(--accent-blue); margin-bottom: 5px;">🌐 維基百科預覽：</div>
-        <iframe id="wiki-frame" class="wiki-iframe" src=""></iframe>
+        <div class="nav-links">
+            <button id="prev-btn" class="nav-btn">
+                <span class="nav-label">← 上一站</span>
+                <span id="prev-title">---</span>
+            </button>
+            <button id="next-btn" class="nav-btn">
+                <span class="nav-label">下一站 →</span>
+                <span id="next-title">---</span>
+            </button>
+        </div>
+
+        <div id="modal-date" style="color: #666; font-weight: bold; margin-bottom: 5px;"></div>
+        <div id="modal-note" style="line-height: 1.6; color: #333; margin-bottom: 20px; font-size: 15px;"></div>
+
+        <div class="wiki-section">
+            <details id="wiki-details">
+                <summary>📖 顯示維基百科介紹</summary>
+                <iframe id="wiki-frame" class="wiki-iframe" src=""></iframe>
+            </details>
+        </div>
     </div>
 </dialog>
 
@@ -82,52 +107,79 @@
     L.control.zoom({ position: 'topright' }).addTo(map);
 
     let allPoints = [
-        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "🚗 下一站：仙台城跡 (約 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" },
-        { "date": "05/31", "lat": 38.2603, "lng": 140.8562, "title": "仙台城跡", "note": "🚗 明日首站：東澤玫瑰公園 (約 1 hr 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/仙台城" },
-        { "date": "06/01", "lat": 38.4833, "lng": 140.3833, "title": "東澤玫瑰公園", "note": "🚗 下一站：中尊寺 (約 1 hr 30 min)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/東沢バラ公園" },
-        { "date": "06/01", "lat": 38.9868, "lng": 141.1141, "title": "平泉中尊寺", "note": "🚗 明日首站：嚴美溪 (約 15 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/中尊寺" },
-        { "date": "06/02", "lat": 38.9442, "lng": 141.0505, "title": "嚴美溪", "note": "🚗 下一站：盛岡手工藝村 (約 1 hr 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/嚴美溪" },
-        { "date": "06/02", "lat": 39.7186, "lng": 141.0991, "title": "盛岡手工藝村", "note": "🚗 明日首站：角館 (約 1 hr)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/盛岡手づくり村" },
-        { "date": "06/03", "lat": 39.5994, "lng": 140.5619, "title": "角館武家屋敷", "note": "🚗 下一站：田澤湖 (約 30 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/角館" },
-        { "date": "06/03", "lat": 39.7225, "lng": 140.6653, "title": "田澤湖", "note": "🚗 明日首站：十和田湖 (約 2 hr 15 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/田澤湖" },
-        { "date": "06/04", "lat": 40.4302, "lng": 140.8913, "title": "十和田湖", "note": "🚗 下一站：奧入瀨溪流 (約 20 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/十和田湖" },
-        { "date": "06/04", "lat": 40.4728, "lng": 140.9592, "title": "奧入瀨溪流", "note": "🚗 明日首站：十和田市現代美術館 (約 50 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/奧入瀨溪流" },
-        { "date": "06/05", "lat": 40.6136, "lng": 141.2131, "title": "十和田市現代美術館", "note": "🚗 下一站：睡魔之家 (約 1 hr 15 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/十和田市現代美術館" },
-        { "date": "06/05", "lat": 40.8291, "lng": 140.7481, "title": "睡魔之家 Wa Rasse", "note": "🚗 旁邊即是：A-Factory (步行 3 min)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/ねぶたの家_ワ・ラッセ" },
-        { "date": "06/06", "lat": 40.8299, "lng": 140.7455, "title": "A-Factory", "note": "🚗 下一站：三內丸山遺跡 (約 15 min)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/A-FACTORY" },
-        { "date": "06/06", "lat": 40.8105, "lng": 140.6974, "title": "三內丸山遺跡", "note": "🚗 終點站：新青森站還車 (約 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/三內丸山遺跡" }
+        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "🚗 下一站：仙台城跡 (約 10 min)。伊達政宗長眠之處，建築精美。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" },
+        { "date": "05/31", "lat": 38.2603, "lng": 140.8562, "title": "仙台城跡", "note": "🚗 明日首站：東澤玫瑰公園 (約 1 hr 10 min)。又名青葉城，可俯瞰仙台全景。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/仙台城" },
+        { "date": "06/01", "lat": 38.4833, "lng": 140.3833, "title": "東澤玫瑰公園", "note": "🚗 下一站：中尊寺 (約 1 hr 30 min)。初夏玫瑰盛開，適合攝影。", "wikiUrl": "https://ja.m.wikipedia.org/wiki/東沢バラ公園" },
+        { "date": "06/01", "lat": 38.9868, "lng": 141.1141, "title": "平泉中尊寺", "note": "🚗 明日首站：嚴美溪 (約 15 min)。金色堂見證奧州藤原氏的繁榮。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/中尊寺" },
+        { "date": "06/02", "lat": 38.9442, "lng": 141.0505, "title": "嚴美溪", "note": "🚗 下一站：盛岡手工藝村 (約 1 hr 10 min)。必吃飛天郭公糰子。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/嚴美溪" },
+        { "date": "06/02", "lat": 39.7186, "lng": 141.0991, "title": "盛岡手工藝村", "note": "🚗 明日首站：角館 (約 1 hr)。體驗手工南部鐵器與在地工藝。", "wikiUrl": "https://ja.m.wikipedia.org/wiki/盛岡手づくり村" },
+        { "date": "06/03", "lat": 39.5994, "lng": 140.5619, "title": "角館武家屋敷", "note": "🚗 下一站：田澤湖 (約 30 min)。保存完整的武士住宅，氛圍幽靜。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/角館" },
+        { "date": "06/03", "lat": 39.7225, "lng": 140.6653, "title": "田澤湖", "note": "🚗 明日首站：十和田湖 (約 2 hr 15 min)。探訪金色辰子像，欣賞湛藍湖水。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/田澤湖" },
+        { "date": "06/04", "lat": 40.4302, "lng": 140.8913, "title": "十和田湖", "note": "🚗 下一站：奧入瀨溪流 (約 20 min)。雙重式火山口湖，乙女之像所在地。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/十和田湖" },
+        { "date": "06/04", "lat": 40.4728, "lng": 140.9592, "title": "奧入瀨溪流", "note": "🚗 明日首站：十和田市現代美術館 (約 50 min)。享受森林浴與流水瀑布聲。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/奧入瀨溪流" },
+        { "date": "06/05", "lat": 40.6136, "lng": 141.2131, "title": "十和田市現代美術館", "note": "🚗 下一站：睡魔之家 (約 1 hr 15 min)。充滿創意的現代建築與大型裝置。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/十和田市現代美術館" },
+        { "date": "06/05", "lat": 40.8291, "lng": 140.7481, "title": "睡魔之家 Wa Rasse", "note": "🚗 旁邊即是：A-Factory (步行 3 min)。了解青森最震撼的睡魔祭。", "wikiUrl": "https://ja.m.wikipedia.org/wiki/ねぶたの家_ワ・拉塞" },
+        { "date": "06/06", "lat": 40.8299, "lng": 140.7455, "title": "A-Factory", "note": "🚗 下一站：三內丸山遺跡 (約 15 min)。蘋果工廠改建，伴手禮天堂。", "wikiUrl": "https://ja.m.wikipedia.org/wiki/A-FACTORY" },
+        { "date": "06/06", "lat": 40.8105, "lng": 140.6974, "title": "三內丸山遺跡", "note": "🚗 終點：新青森站 (10 min)。走進日本最大級的繩文時代遺跡。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/三內丸山遺跡" }
     ];
 
     const colorPalette = ['blue', 'red', 'orange', 'violet', 'green', 'gold', 'grey', 'black'];
-    const dateColorMap = {};
     let markersLayer = L.layerGroup().addTo(map);
 
-    function openDetail(p) {
+    function openDetail(index) {
+        const p = allPoints[index];
+        const modal = document.getElementById('detail-modal');
+        
         document.getElementById('modal-title').innerText = p.title;
-        document.getElementById('modal-date').innerText = `🗓️ 日期：${p.date}`;
+        document.getElementById('modal-date').innerText = `🗓️ ${p.date}`;
         document.getElementById('modal-note').innerText = p.note;
-        // 使用行動版維基網址較適合小窗顯示
-        let mobileWiki = p.wikiUrl.replace('zh.wikipedia', 'zh.m.wikipedia').replace('ja.wikipedia', 'ja.m.wikipedia');
-        document.getElementById('wiki-frame').src = mobileWiki;
-        document.getElementById('detail-modal').showModal();
+        document.getElementById('wiki-frame').src = p.wikiUrl.replace('.wikipedia', '.m.wikipedia');
+        document.getElementById('wiki-details').open = false; // 預設關閉維基
+
+        // 導航連結邏輯
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        
+        if (index > 0) {
+            prevBtn.disabled = false;
+            document.getElementById('prev-title').innerText = allPoints[index-1].title;
+            prevBtn.onclick = () => openDetail(index - 1);
+        } else {
+            prevBtn.disabled = true;
+            document.getElementById('prev-title').innerText = "起點";
+        }
+
+        if (index < allPoints.length - 1) {
+            nextBtn.disabled = false;
+            document.getElementById('next-title').innerText = allPoints[index+1].title;
+            nextBtn.onclick = () => openDetail(index + 1);
+        } else {
+            nextBtn.disabled = true;
+            document.getElementById('next-title').innerText = "終點";
+        }
+
+        modal.showModal();
+    }
+
+    function closeModal() {
+        document.getElementById('detail-modal').close();
     }
 
     function renderAll() {
         markersLayer.clearLayers();
         const uniqueDates = [...new Set(allPoints.map(p => p.date))].sort();
-        uniqueDates.forEach((date, index) => dateColorMap[date] = colorPalette[index % colorPalette.length]);
+        const dateColorMap = {};
+        uniqueDates.forEach((date, i) => dateColorMap[date] = colorPalette[i % colorPalette.length]);
 
-        allPoints.forEach(p => {
-            const color = dateColorMap[p.date] || 'blue';
-            const customIcon = L.divIcon({
+        allPoints.forEach((p, index) => {
+            const color = dateColorMap[p.date];
+            const icon = L.divIcon({
                 className: 'custom-pin',
                 html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:25px">`,
                 iconSize: [25, 41], iconAnchor: [12, 41]
             });
 
-            const marker = L.marker([p.lat, p.lng], { icon: customIcon });
-            // 點擊針頭直接打開中型彈窗，不再使用小型彈窗
-            marker.on('click', () => openDetail(p));
+            const marker = L.marker([p.lat, p.lng], { icon }).on('click', () => openDetail(index));
             markersLayer.addLayer(marker);
         });
     }
@@ -138,7 +190,7 @@
         const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `White6_Tohoku_Route.json`;
+        a.download = `White6_Route_Smart.json`;
         a.click();
     }
 
@@ -147,11 +199,8 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                allPoints = JSON.parse(e.target.result);
-                renderAll();
-                alert("𓃥 行程匯入成功！");
-            } catch (err) { alert("讀取失敗"); }
+            allPoints = JSON.parse(e.target.result);
+            renderAll();
         };
         reader.readAsText(file);
     }
