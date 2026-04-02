@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𓃥 白六快傳地圖 - 焦點鎖定版</title>
+    <title>𓃥 白六快傳地圖 - 自動聚焦版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #2d5a27; --bg-color: #f4f4f2; --accent-blue: #4a90e2; }
@@ -54,7 +54,6 @@
         .btn-export { background: var(--primary-color); color: white; }
         .btn-import { background: var(--accent-blue); color: white; }
 
-        /* Marker 縮放動畫 */
         .custom-pin img { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
@@ -99,7 +98,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const map = L.map('map', { zoomControl: false }).setView([39.7020, 141.1545], 7);
+    const map = L.map('map', { zoomControl: false }).setView([39.7020, 141.1545], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     L.control.zoom({ position: 'topright' }).addTo(map);
 
@@ -122,13 +121,12 @@
 
     const colorPalette = ['blue', 'red', 'orange', 'violet', 'green', 'gold', 'grey', 'black'];
     let markersLayer = L.layerGroup().addTo(map);
-    let markerList = []; // 儲存 marker 物件引用
-    let currentActiveMarker = null; // 當前放大中的 marker
+    let markerList = [];
+    let currentActiveMarker = null;
 
-    // 建立 Icon 的輔助函式
     function createPinIcon(color, isBig = false) {
-        const size = isBig ? [35, 57] : [25, 41];
-        const anchor = isBig ? [17, 57] : [12, 41];
+        const size = isBig ? [38, 62] : [25, 41];
+        const anchor = isBig ? [19, 62] : [12, 41];
         return L.divIcon({
             className: 'custom-pin',
             html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:${size[0]}px; height:${size[1]}px;">`,
@@ -141,22 +139,25 @@
         const p = allPoints[index];
         const targetMarker = markerList[index];
 
-        // 處理 Marker 縮放邏輯
+        // 1. 地圖平移邏輯：將點位設為中心
+        // panBy([0, -150]) 是為了將點位上移，避免被螢幕中央的彈窗擋住
+        map.panTo([p.lat, p.lng], { animate: true, duration: 0.5 });
+        setTimeout(() => map.panBy([0, -100], { animate: true }), 200);
+
+        // 2. Marker 縮放邏輯
         if (currentActiveMarker && currentActiveMarker !== targetMarker) {
-            // 將前一個選中的縮小（獲取原本顏色）
             const prevIndex = markerList.indexOf(currentActiveMarker);
             const prevColor = getMarkerColor(allPoints[prevIndex].date);
             currentActiveMarker.setIcon(createPinIcon(prevColor, false));
             currentActiveMarker.setZIndexOffset(0);
         }
 
-        // 放大當前選中的
         const currentColor = getMarkerColor(p.date);
         targetMarker.setIcon(createPinIcon(currentColor, true));
-        targetMarker.setZIndexOffset(1000); // 確保在最上層
+        targetMarker.setZIndexOffset(1000);
         currentActiveMarker = targetMarker;
 
-        // 更新 Modal 內容
+        // 3. UI 更新
         document.getElementById('modal-title').innerText = p.title;
         document.getElementById('modal-date').innerText = `🗓️ ${p.date}`;
         document.getElementById('modal-note').innerText = p.note;
@@ -189,7 +190,6 @@
 
     function closeModal() {
         document.getElementById('detail-modal').close();
-        // 注意：依照需求，關閉視窗後不縮小圖示，因此這裡不處理 marker
     }
 
     function getMarkerColor(date) {
@@ -201,12 +201,10 @@
     function renderAll() {
         markersLayer.clearLayers();
         markerList = [];
-        
         allPoints.forEach((p, index) => {
             const color = getMarkerColor(p.date);
             const icon = createPinIcon(color, false);
             const marker = L.marker([p.lat, p.lng], { icon }).on('click', () => openDetail(index));
-            
             markersLayer.addLayer(marker);
             markerList.push(marker);
         });
@@ -218,7 +216,7 @@
         const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `White6_Route_Focus.json`;
+        a.download = `White6_Focus_Centered.json`;
         a.click();
     }
 
