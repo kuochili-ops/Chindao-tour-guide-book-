@@ -3,60 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𓃥 白六快傳地圖 - 自動聚焦版</title>
+    <title>𓃥 白六快傳地圖 - 智慧導航版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --primary-color: #2d5a27; --bg-color: #f4f4f2; --accent-blue: #4a90e2; }
+        :root { --primary-color: #2d5a27; --bg-color: #f4f4f2; --accent-blue: #007aff; }
         body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg-color); overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
 
+        /* 底部控制列 */
         .controls { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 10px; background: rgba(255,255,255,0.9);
             padding: 10px 20px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
+        /* 中型彈窗優化 */
         #detail-modal {
-            border: none; border-radius: 16px; padding: 0; width: 85%; max-width: 550px;
-            max-height: 85vh; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            border: none; border-radius: 20px; padding: 0; width: 90%; max-width: 500px;
+            max-height: 70vh; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             animation: slideUp 0.3s ease-out;
         }
-        #detail-modal::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        #detail-modal::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); }
         
         .modal-header { 
-            background: var(--primary-color); color: white; padding: 15px 20px;
+            background: var(--primary-color); color: white; padding: 18px 20px;
             display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 10;
         }
-        .modal-body { padding: 20px; overflow-y: auto; }
-        .modal-close { background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
+        .modal-body { padding: 25px; overflow-y: auto; background: white; }
+        .modal-close { background: none; border: none; color: white; font-size: 30px; cursor: pointer; line-height: 1; }
 
-        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
+        /* 上下站導航 */
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 12px; }
         .nav-btn { 
-            flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; 
-            background: #fff; cursor: pointer; font-size: 13px; transition: 0.2s;
+            flex: 1; padding: 12px; border: 1.5px solid #eee; border-radius: 12px; 
+            background: #fff; cursor: pointer; transition: 0.2s;
             display: flex; flex-direction: column; align-items: center;
         }
-        .nav-btn:hover:not(:disabled) { background: #f0f7f0; border-color: var(--primary-color); }
-        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .nav-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+        .nav-btn:hover:not(:disabled) { border-color: var(--primary-color); background: #f8faf8; }
+        .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+        .nav-label { font-size: 11px; color: #999; margin-bottom: 4px; }
+        .nav-title { font-weight: bold; font-size: 13px; color: #333; }
 
-        .wiki-section { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px; }
-        details summary { 
-            list-style: none; cursor: pointer; color: var(--accent-blue); 
-            font-weight: bold; text-align: center; padding: 8px;
-            border: 1px solid var(--accent-blue); border-radius: 6px;
+        /* 外部連結按鈕區 */
+        .link-section { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .external-link {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 15px;
+            transition: 0.2s;
         }
-        details[open] summary { background: var(--accent-blue); color: white; margin-bottom: 10px; }
-        .wiki-iframe { width: 100%; height: 350px; border: 1px solid #ddd; border-radius: 8px; }
-
-        .btn { padding: 10px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        .btn-export { background: var(--primary-color); color: white; }
-        .btn-import { background: var(--accent-blue); color: white; }
+        .btn-wiki { background: #f8f9fa; color: #333; border: 1px solid #ddd; }
+        .btn-google { background: #e8f0fe; color: #1a73e8; border: 1px solid #1a73e8; }
+        .external-link:active { transform: scale(0.98); }
 
         .custom-pin img { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -64,34 +64,38 @@
 <div id="map"></div>
 
 <div class="controls">
-    <button class="btn btn-export" onclick="exportData()">📤 匯出</button>
-    <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
+    <button style="padding: 10px 20px; border-radius: 20px; border: none; background: var(--primary-color); color: white; font-weight: bold; cursor: pointer;" onclick="exportData()">📤 匯出</button>
+    <button style="padding: 10px 20px; border-radius: 20px; border: none; background: var(--accent-blue); color: white; font-weight: bold; cursor: pointer;" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
     <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importData(event)">
 </div>
 
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-size: 18px;">景點詳解</span>
+        <span id="modal-title" style="font-size: 18px; font-weight: bold;">景點介紹</span>
         <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
         <div class="nav-links">
             <button id="prev-btn" class="nav-btn">
                 <span class="nav-label">← 上一站</span>
-                <span id="prev-title">---</span>
+                <span id="prev-title" class="nav-title">---</span>
             </button>
             <button id="next-btn" class="nav-btn">
                 <span class="nav-label">下一站 →</span>
-                <span id="next-title">---</span>
+                <span id="next-title" class="nav-title">---</span>
             </button>
         </div>
-        <div id="modal-date" style="color: #666; font-weight: bold; margin-bottom: 5px;"></div>
-        <div id="modal-note" style="line-height: 1.6; color: #333; margin-bottom: 20px; font-size: 15px;"></div>
-        <div class="wiki-section">
-            <details id="wiki-details">
-                <summary>📖 顯示維基百科介紹</summary>
-                <iframe id="wiki-frame" class="wiki-iframe" src=""></iframe>
-            </details>
+
+        <div id="modal-date" style="font-size: 14px; color: #2d5a27; font-weight: bold; margin-bottom: 8px;"></div>
+        <div id="modal-note" style="line-height: 1.6; color: #444; font-size: 16px; margin-bottom: 25px; border-left: 4px solid #eee; padding-left: 15px;"></div>
+
+        <div class="link-section">
+            <a id="wiki-link" href="#" target="_blank" class="external-link btn-wiki">
+                📖 閱讀維基百科介紹
+            </a>
+            <a id="google-link" href="#" target="_blank" class="external-link btn-google">
+                🔍 在 Google 搜尋此地
+            </a>
         </div>
     </div>
 </dialog>
@@ -100,38 +104,35 @@
 <script>
     const map = L.map('map', { zoomControl: false }).setView([39.7020, 141.1545], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    L.control.zoom({ position: 'topright' }).addTo(map);
 
     let allPoints = [
-        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "🚗 下一站：仙台城跡 (約 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" },
-        { "date": "05/31", "lat": 38.2603, "lng": 140.8562, "title": "仙台城跡", "note": "🚗 明日首站：東澤玫瑰公園 (約 1 hr 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/仙台城" },
-        { "date": "06/01", "lat": 38.4833, "lng": 140.3833, "title": "東澤玫瑰公園", "note": "🚗 下一站：中尊寺 (約 1 hr 30 min)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/東沢バラ公園" },
-        { "date": "06/01", "lat": 38.9868, "lng": 141.1141, "title": "平泉中尊寺", "note": "🚗 明日首站：嚴美溪 (約 15 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/中尊寺" },
-        { "date": "06/02", "lat": 38.9442, "lng": 141.0505, "title": "嚴美溪", "note": "🚗 下一站：盛岡手工藝村 (約 1 hr 10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/嚴美溪" },
-        { "date": "06/02", "lat": 39.7186, "lng": 141.0991, "title": "盛岡手工藝村", "note": "🚗 明日首站：角館 (約 1 hr)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/盛岡手づくり村" },
-        { "date": "06/03", "lat": 39.5994, "lng": 140.5619, "title": "角館武家屋敷", "note": "🚗 下一站：田澤湖 (約 30 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/角館" },
-        { "date": "06/03", "lat": 39.7225, "lng": 140.6653, "title": "田澤湖", "note": "🚗 明日首站：十和田湖 (約 2 hr 15 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/田澤湖" },
-        { "date": "06/04", "lat": 40.4302, "lng": 140.8913, "title": "十和田湖", "note": "🚗 下一站：奧入瀨溪流 (約 20 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/十和田湖" },
-        { "date": "06/04", "lat": 40.4728, "lng": 140.9592, "title": "奧入瀨溪流", "note": "🚗 明日首站：十和田市現代美術館 (約 50 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/奧入瀨溪流" },
-        { "date": "06/05", "lat": 40.6136, "lng": 141.2131, "title": "十和田市現代美術館", "note": "🚗 下一站：睡魔之家 (約 1 hr 15 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/十和田市現代美術館" },
-        { "date": "06/05", "lat": 40.8291, "lng": 140.7481, "title": "睡魔之家 Wa Rasse", "note": "🚗 旁邊即是：A-Factory (步行 3 min)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/ねぶたの家_ワ・拉塞" },
-        { "date": "06/06", "lat": 40.8299, "lng": 140.7455, "title": "A-Factory", "note": "🚗 下一站：三內丸山遺跡 (約 15 min)", "wikiUrl": "https://ja.m.wikipedia.org/wiki/A-FACTORY" },
-        { "date": "06/06", "lat": 40.8105, "lng": 140.6974, "title": "三內丸山遺跡", "note": "🚗 終點：新青森站 (10 min)", "wikiUrl": "https://zh.m.wikipedia.org/wiki/三內丸山遺跡" }
+        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "🚗 下一站：仙台城跡 (約 10 min)。伊達政宗長眠處。", "wikiUrl": "https://zh.wikipedia.org/wiki/瑞鳳殿" },
+        { "date": "05/31", "lat": 38.2603, "lng": 140.8562, "title": "仙台城跡", "note": "🚗 明日首站：東澤玫瑰公園 (約 1 hr 10 min)。可鳥瞰仙台市區。", "wikiUrl": "https://zh.wikipedia.org/wiki/仙台城" },
+        { "date": "06/01", "lat": 38.4833, "lng": 140.3833, "title": "東澤玫瑰公園", "note": "🚗 下一站：中尊寺 (約 1 hr 30 min)。初夏玫瑰季首選。", "wikiUrl": "https://ja.wikipedia.org/wiki/東沢バラ公園" },
+        { "date": "06/01", "lat": 38.9868, "lng": 141.1141, "title": "平泉中尊寺", "note": "🚗 明日首站：嚴美溪 (約 15 min)。世界文化遺產。", "wikiUrl": "https://zh.wikipedia.org/wiki/中尊寺" },
+        { "date": "06/02", "lat": 38.9442, "lng": 141.0505, "title": "嚴美溪", "note": "🚗 下一站：盛岡手工藝村 (約 1 hr 10 min)。飛天糰子發源地。", "wikiUrl": "https://zh.wikipedia.org/wiki/嚴美溪" },
+        { "date": "06/02", "lat": 39.7186, "lng": 141.0991, "title": "盛岡手工藝村", "note": "🚗 明日首站：角館 (約 1 hr)。體驗南部鐵器製作。", "wikiUrl": "https://ja.wikipedia.org/wiki/盛岡手づくり村" },
+        { "date": "06/03", "lat": 39.5994, "lng": 140.5619, "title": "角館武家屋敷", "note": "🚗 下一站：田澤湖 (約 30 min)。陸奧小京都。", "wikiUrl": "https://zh.wikipedia.org/wiki/角館" },
+        { "date": "06/03", "lat": 39.7225, "lng": 140.6653, "title": "田澤湖", "note": "🚗 明日首站：十和田湖 (約 2 hr 15 min)。尋訪金色辰子像。", "wikiUrl": "https://zh.wikipedia.org/wiki/田澤湖" },
+        { "date": "06/04", "lat": 40.4302, "lng": 140.8913, "title": "十和田湖", "note": "🚗 下一站：奧入瀨溪流 (約 20 min)。乙女之像所在地。", "wikiUrl": "https://zh.wikipedia.org/wiki/十和田湖" },
+        { "date": "06/04", "lat": 40.4728, "lng": 140.9592, "title": "奧入瀨溪流", "note": "🚗 明日首站：十和田市現代美術館 (約 50 min)。享受森林綠意。", "wikiUrl": "https://zh.wikipedia.org/wiki/奧入瀨溪流" },
+        { "date": "06/05", "lat": 40.6136, "lng": 141.2131, "title": "十和田市現代美術館", "note": "🚗 下一站：睡魔之家 (約 1 hr 15 min)。充滿創意的草間彌生作品。", "wikiUrl": "https://zh.wikipedia.org/wiki/十和田市現代美術館" },
+        { "date": "06/05", "lat": 40.8291, "lng": 140.7481, "title": "睡魔之家 Wa Rasse", "note": "🚗 旁邊即是：A-Factory (步行 3 min)。青森祭典文化全覽。", "wikiUrl": "https://ja.wikipedia.org/wiki/ねぶたの家_ワ・ラッセ" },
+        { "date": "06/06", "lat": 40.8299, "lng": 140.7455, "title": "A-Factory", "note": "🚗 下一站：三內丸山遺跡 (約 15 min)。蘋果酒工廠與名產店。", "wikiUrl": "https://ja.wikipedia.org/wiki/A-FACTORY" },
+        { "date": "06/06", "lat": 40.8105, "lng": 140.6974, "title": "三內丸山遺跡", "note": "🚗 終點：新青森站。日本最大的繩文時代遺跡。", "wikiUrl": "https://zh.wikipedia.org/wiki/三內丸山遺跡" }
     ];
 
     const colorPalette = ['blue', 'red', 'orange', 'violet', 'green', 'gold', 'grey', 'black'];
-    let markersLayer = L.layerGroup().addTo(map);
     let markerList = [];
     let currentActiveMarker = null;
 
     function createPinIcon(color, isBig = false) {
-        const size = isBig ? [38, 62] : [25, 41];
-        const anchor = isBig ? [19, 62] : [12, 41];
+        const size = isBig ? [42, 68] : [25, 41];
+        const anchor = isBig ? [21, 68] : [12, 41];
         return L.divIcon({
             className: 'custom-pin',
             html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:${size[0]}px; height:${size[1]}px;">`,
-            iconSize: size,
-            iconAnchor: anchor
+            iconSize: size, iconAnchor: anchor
         });
     }
 
@@ -139,73 +140,67 @@
         const p = allPoints[index];
         const targetMarker = markerList[index];
 
-        // 1. 地圖平移邏輯：將點位設為中心
-        // panBy([0, -150]) 是為了將點位上移，避免被螢幕中央的彈窗擋住
-        map.panTo([p.lat, p.lng], { animate: true, duration: 0.5 });
-        setTimeout(() => map.panBy([0, -100], { animate: true }), 200);
+        // 地圖聚焦
+        map.panTo([p.lat, p.lng], { animate: true, duration: 0.6 });
+        setTimeout(() => map.panBy([0, -120], { animate: true }), 250);
 
-        // 2. Marker 縮放邏輯
+        // Marker 狀態切換
         if (currentActiveMarker && currentActiveMarker !== targetMarker) {
             const prevIndex = markerList.indexOf(currentActiveMarker);
             const prevColor = getMarkerColor(allPoints[prevIndex].date);
             currentActiveMarker.setIcon(createPinIcon(prevColor, false));
             currentActiveMarker.setZIndexOffset(0);
         }
-
-        const currentColor = getMarkerColor(p.date);
-        targetMarker.setIcon(createPinIcon(currentColor, true));
+        targetMarker.setIcon(createPinIcon(getMarkerColor(p.date), true));
         targetMarker.setZIndexOffset(1000);
         currentActiveMarker = targetMarker;
 
-        // 3. UI 更新
+        // UI 填充
         document.getElementById('modal-title').innerText = p.title;
-        document.getElementById('modal-date').innerText = `🗓️ ${p.date}`;
+        document.getElementById('modal-date').innerText = `🗓️ ${p.date} 行程`;
         document.getElementById('modal-note').innerText = p.note;
-        document.getElementById('wiki-frame').src = p.wikiUrl.replace('.wikipedia', '.m.wikipedia');
-        document.getElementById('wiki-details').open = false;
+        
+        // 方案三：智慧連結設定
+        document.getElementById('wiki-link').href = p.wikiUrl;
+        document.getElementById('google-link').href = `https://www.google.com/search?q=${encodeURIComponent(p.title + ' 東北 景點')}`;
 
+        // 導航邏輯
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
-        
         if (index > 0) {
             prevBtn.disabled = false;
             document.getElementById('prev-title').innerText = allPoints[index-1].title;
             prevBtn.onclick = () => openDetail(index - 1);
         } else {
             prevBtn.disabled = true;
-            document.getElementById('prev-title').innerText = "起點";
+            document.getElementById('prev-title').innerText = "旅程起點";
         }
-
         if (index < allPoints.length - 1) {
             nextBtn.disabled = false;
             document.getElementById('next-title').innerText = allPoints[index+1].title;
             nextBtn.onclick = () => openDetail(index + 1);
         } else {
             nextBtn.disabled = true;
-            document.getElementById('next-title').innerText = "終點";
+            document.getElementById('next-title').innerText = "旅程終點";
         }
 
         document.getElementById('detail-modal').showModal();
     }
 
-    function closeModal() {
-        document.getElementById('detail-modal').close();
-    }
+    function closeModal() { document.getElementById('detail-modal').close(); }
 
     function getMarkerColor(date) {
         const uniqueDates = [...new Set(allPoints.map(p => p.date))].sort();
-        const index = uniqueDates.indexOf(date);
-        return colorPalette[index % colorPalette.length];
+        return colorPalette[uniqueDates.indexOf(date) % colorPalette.length];
     }
 
     function renderAll() {
-        markersLayer.clearLayers();
+        markerList.forEach(m => map.removeLayer(m));
         markerList = [];
         allPoints.forEach((p, index) => {
-            const color = getMarkerColor(p.date);
-            const icon = createPinIcon(color, false);
-            const marker = L.marker([p.lat, p.lng], { icon }).on('click', () => openDetail(index));
-            markersLayer.addLayer(marker);
+            const marker = L.marker([p.lat, p.lng], { icon: createPinIcon(getMarkerColor(p.date), false) })
+                           .on('click', () => openDetail(index));
+            marker.addTo(map);
             markerList.push(marker);
         });
     }
@@ -213,23 +208,16 @@
     renderAll();
 
     function exportData() {
-        const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `White6_Focus_Centered.json`;
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" }));
+        a.download = `White6_Tohoku_Travel.json`;
         a.click();
     }
 
     function importData(event) {
-        const file = event.target.files[0];
-        if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => {
-            allPoints = JSON.parse(e.target.result);
-            renderAll();
-            currentActiveMarker = null;
-        };
-        reader.readAsText(file);
+        reader.onload = (e) => { allPoints = JSON.parse(e.target.result); renderAll(); currentActiveMarker = null; };
+        reader.readAsText(event.target.files[0]);
     }
 </script>
 </body>
