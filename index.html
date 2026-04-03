@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𓃥 白六快傳地圖 - 內嵌優化版</title>
+    <title>𓃥 白六快傳地圖 - 點擊修復版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #2d5a27; --accent-blue: #007aff; }
@@ -16,11 +16,9 @@
             padding: 10px 20px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        /* 景點主視窗 */
         #detail-modal {
             border: none; border-radius: 20px; padding: 0; width: 92%; max-width: 500px;
             height: 80vh; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            animation: slideUp 0.3s ease-out;
         }
         #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
         
@@ -28,32 +26,16 @@
             background: var(--primary-color); color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .modal-body { 
-            height: calc(80vh - 65px); overflow-y: auto; display: flex; flex-direction: column;
-        }
+        .modal-body { height: calc(80vh - 65px); overflow-y: auto; display: flex; flex-direction: column; }
 
-        /* 導航區 */
         .nav-links { display: flex; justify-content: space-between; padding: 15px; gap: 10px; background: #fff; }
-        .nav-btn { 
-            flex: 1; padding: 8px; border: 1px solid #eee; border-radius: 8px; 
-            background: #fff; cursor: pointer; text-align: center;
-        }
+        .nav-btn { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; background: #fff; cursor: pointer; }
         .nav-btn:disabled { opacity: 0.3; }
 
-        /* 內嵌網頁區 (重點修正) */
-        .web-container { flex: 1; position: relative; border-top: 1px solid #ddd; background: #eee; }
+        .web-container { flex: 1; position: relative; border-top: 1px solid #ddd; }
         .web-frame { width: 100%; height: 100%; border: none; background: white; }
-        
-        /* 覆蓋層：當 iframe 被阻擋時的提示 */
-        .frame-error {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: #f9f9f9; text-align: center; padding: 20px; box-sizing: border-box;
-            z-index: -1; /* 預設在後方 */
-        }
 
         .custom-pin img { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -61,8 +43,8 @@
 <div id="map"></div>
 
 <div class="controls">
-    <button style="padding: 10px 18px; border-radius: 20px; border: none; background: var(--primary-color); color: white; font-weight: bold;" onclick="exportData()">📤 匯出</button>
-    <button style="padding: 10px 18px; border-radius: 20px; border: none; background: var(--accent-blue); color: white; font-weight: bold;" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
+    <button style="padding: 10px 18px; border-radius: 20px; border: none; background: var(--primary-color); color: white; font-weight: bold; cursor: pointer;" onclick="exportData()">📤 匯出</button>
+    <button style="padding: 10px 18px; border-radius: 20px; border: none; background: var(--accent-blue); color: white; font-weight: bold; cursor: pointer;" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
     <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importData(event)">
 </div>
 
@@ -76,16 +58,8 @@
             <button id="prev-btn" class="nav-btn"><small>← 上一站</small><div id="prev-title" style="font-weight:bold; font-size:12px;"></div></button>
             <button id="next-btn" class="nav-btn"><small>下一站 →</small><div id="next-title" style="font-weight:bold; font-size:12px;"></div></button>
         </div>
-        
-        <div style="padding: 0 15px 15px;">
-            <div id="modal-note" style="font-size:14px; color:#555; line-height:1.4;"></div>
-        </div>
-
+        <div style="padding: 10px 15px;"><div id="modal-note" style="font-size:14px; color:#555;"></div></div>
         <div class="web-container">
-            <div class="frame-error">
-                <p style="font-size:14px; color:#666;">此網頁限制在視窗內開啟</p>
-                <a id="fallback-link" href="#" target="_blank" style="color:var(--accent-blue); font-weight:bold; text-decoration:none;">直接點此開啟全版網頁</a>
-            </div>
             <iframe id="info-frame" class="web-frame" src=""></iframe>
         </div>
     </div>
@@ -118,77 +92,111 @@
         });
     }
 
+    // 點擊針頭的核心功能
     function openDetail(index) {
         const p = allPoints[index];
-        const targetMarker = markerList[index];
+        if (!p) return;
 
+        // 1. 地圖中心位移
         map.panTo([p.lat, p.lng], { animate: true });
-        setTimeout(() => map.panBy([0, -150], { animate: true }), 250);
+        setTimeout(() => map.panBy([0, -150], { animate: true }), 200);
 
-        if (currentActiveMarker && currentActiveMarker !== targetMarker) {
-            const prevIdx = markerList.indexOf(currentActiveMarker);
-            currentActiveMarker.setIcon(createIcon(getPinColor(allPoints[prevIdx].date), false));
+        // 2. 針頭縮放切換
+        if (currentActiveMarker) {
+            const oldIdx = markerList.indexOf(currentActiveMarker);
+            if (oldIdx !== -1) {
+                currentActiveMarker.setIcon(createIcon(getPinColor(allPoints[oldIdx].date), false));
+            }
         }
+        const targetMarker = markerList[index];
         targetMarker.setIcon(createIcon(getPinColor(p.date), true));
         targetMarker.setZIndexOffset(1000);
         currentActiveMarker = targetMarker;
 
+        // 3. 彈窗內容設置
         document.getElementById('modal-title').innerText = p.title;
         document.getElementById('modal-note').innerText = p.note;
+        
+        // 維基連結處理
+        const wikiLink = p.wikiUrl.replace('zh.wikipedia', 'zh.m.wikipedia').replace('ja.wikipedia', 'ja.m.wikipedia');
+        document.getElementById('info-frame').src = wikiLink;
 
-        // 解決空白問題：
-        // 1. 強制使用行動版網址 (.m.wikipedia)
-        // 2. Wikipedia 內嵌限制非常嚴，若依然空白，Fallback 提示會出現
-        const mobileWiki = p.wikiUrl.replace('zh.wikipedia', 'zh.m.wikipedia').replace('ja.wikipedia', 'ja.m.wikipedia');
-        document.getElementById('info-frame').src = mobileWiki;
-        document.getElementById('fallback-link').href = mobileWiki;
-
+        // 4. 導航按鈕更新
         const pb = document.getElementById('prev-btn'), nb = document.getElementById('next-btn');
         if (index > 0) {
-            pb.disabled = false; document.getElementById('prev-title').innerText = allPoints[index-1].title;
+            pb.disabled = false;
+            document.getElementById('prev-title').innerText = allPoints[index-1].title;
             pb.onclick = () => openDetail(index - 1);
-        } else { pb.disabled = true; document.getElementById('prev-title').innerText = "旅程起點"; }
-        
-        if (index < allPoints.length - 1) {
-            nb.disabled = false; document.getElementById('next-title').innerText = allPoints[index+1].title;
-            nb.onclick = () => openDetail(index + 1);
-        } else { nb.disabled = true; document.getElementById('next-title').innerText = "旅程終點"; }
+        } else {
+            pb.disabled = true;
+            document.getElementById('prev-title').innerText = "起點";
+        }
 
+        if (index < allPoints.length - 1) {
+            nb.disabled = false;
+            document.getElementById('next-title').innerText = allPoints[index+1].title;
+            nb.onclick = () => openDetail(index + 1);
+        } else {
+            nb.disabled = true;
+            document.getElementById('next-title').innerText = "終點";
+        }
+
+        // 5. 顯示彈窗
         document.getElementById('detail-modal').showModal();
     }
 
-    function closeModal() { document.getElementById('detail-modal').close(); }
+    function closeModal() {
+        document.getElementById('detail-modal').close();
+    }
 
-    function render() {
+    function renderMarkers() {
+        // 清除舊針頭
         markerList.forEach(m => map.removeLayer(m));
         markerList = [];
+
         allPoints.forEach((p, index) => {
-            const m = L.marker([p.lat, p.lng], { icon: createIcon(getPinColor(p.date), false) }).on('click', () => openDetail(index));
-            m.addTo(map);
-            markerList.push(m);
+            const color = getPinColor(p.date);
+            const marker = L.marker([p.lat, p.lng], { icon: createIcon(color, false) });
+            
+            // 確保點擊事件被綁定
+            marker.on('click', (e) => {
+                L.DomEvent.stopPropagation(e); // 防止地圖點擊事件干擾
+                openDetail(index);
+            });
+
+            marker.addTo(map);
+            markerList.push(marker);
         });
     }
 
     function importData(event) {
         const file = event.target.files[0];
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            allPoints = JSON.parse(e.target.result);
-            render();
-            currentActiveMarker = null;
+            try {
+                allPoints = JSON.parse(e.target.result);
+                renderMarkers();
+                currentActiveMarker = null;
+            } catch (err) {
+                alert("檔案格式錯誤");
+            }
         };
         reader.readAsText(file);
     }
 
     function exportData() {
-        const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
+        const data = JSON.stringify(allPoints, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `White6_Route.json`;
+        a.href = url;
+        a.download = "White6_Route.json";
         a.click();
     }
 
-    render();
+    // 初始化執行
+    renderMarkers();
 </script>
 </body>
 </html>
