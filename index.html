@@ -3,39 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𓃥 白六快傳地圖 - 點擊修復版</title>
+    <title>𓃥 白六快傳地圖 - 單點優化版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #2d5a27; --accent-blue: #007aff; }
         body { font-family: -apple-system, sans-serif; margin: 0; background: #f4f4f2; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
 
+        /* 底部控制按鈕 */
         .controls { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 10px; background: rgba(255,255,255,0.9);
             padding: 10px 20px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
+        /* 景點主視窗：中型尺寸 */
         #detail-modal {
             border: none; border-radius: 20px; padding: 0; width: 92%; max-width: 500px;
-            height: 80vh; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            height: 85vh; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            outline: none;
         }
         #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
         
         .modal-header { 
             background: var(--primary-color); color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 10;
         }
-        .modal-body { height: calc(80vh - 65px); overflow-y: auto; display: flex; flex-direction: column; }
+        .modal-body { 
+            height: calc(85vh - 65px); overflow-y: auto; display: flex; flex-direction: column;
+            background: white;
+        }
 
-        .nav-links { display: flex; justify-content: space-between; padding: 15px; gap: 10px; background: #fff; }
-        .nav-btn { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 8px; background: #fff; cursor: pointer; }
-        .nav-btn:disabled { opacity: 0.3; }
+        /* 資訊區塊：簡介、導航、交通 */
+        .info-section { padding: 15px; background: #fff; }
+        .nav-links { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+        .nav-btn { 
+            flex: 1; padding: 8px; border: 1px solid #eee; border-radius: 10px; 
+            background: #f9f9f9; cursor: pointer; text-align: center;
+        }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .nav-label { font-size: 10px; color: #888; display: block; }
+        .nav-title { font-weight: bold; font-size: 12px; color: #333; }
 
-        .web-container { flex: 1; position: relative; border-top: 1px solid #ddd; }
-        .web-frame { width: 100%; height: 100%; border: none; background: white; }
+        .note-box { 
+            font-size: 15px; color: #444; line-height: 1.6; 
+            padding: 12px; background: #f0f7ef; border-radius: 10px; border-left: 4px solid var(--primary-color);
+        }
+
+        /* 維基百科內嵌區塊 */
+        .web-container { flex: 1; border-top: 1px solid #ddd; position: relative; min-height: 300px; }
+        .web-frame { width: 100%; height: 100%; border: none; background: #fff; }
 
         .custom-pin img { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -50,41 +71,63 @@
 
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-weight: bold;">景點導覽</span>
-        <button style="background:none; border:none; color:white; font-size:30px; cursor:pointer;" onclick="closeModal()">×</button>
+        <span id="modal-title" style="font-weight: bold; font-size: 18px;">景點資訊</span>
+        <button style="background:none; border:none; color:white; font-size:32px; cursor:pointer;" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
-        <div class="nav-links">
-            <button id="prev-btn" class="nav-btn"><small>← 上一站</small><div id="prev-title" style="font-weight:bold; font-size:12px;"></div></button>
-            <button id="next-btn" class="nav-btn"><small>下一站 →</small><div id="next-title" style="font-weight:bold; font-size:12px;"></div></button>
+        <div class="info-section">
+            <div class="nav-links">
+                <button id="prev-btn" class="nav-btn">
+                    <span class="nav-label">← 上一站</span>
+                    <span id="prev-title" class="nav-title">無</span>
+                </button>
+                <button id="next-btn" class="nav-btn">
+                    <span class="nav-label">下一站 →</span>
+                    <span id="next-title" class="nav-title">無</span>
+                </button>
+            </div>
+            
+            <div id="modal-note" class="note-box">
+                點擊景點以查看詳細說明的與導航資訊。
+            </div>
         </div>
-        <div style="padding: 10px 15px;"><div id="modal-note" style="font-size:14px; color:#555;"></div></div>
+
         <div class="web-container">
-            <iframe id="info-frame" class="web-frame" src=""></iframe>
+            <iframe id="info-frame" class="web-frame" src="about:blank"></iframe>
         </div>
     </div>
 </dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const map = L.map('map', { zoomControl: false }).setView([39.7020, 141.1545], 8);
+    // 初始化地圖
+    const map = L.map('map', { zoomControl: false }).setView([38.2526, 140.8739], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+    // 預設的一個點
     let allPoints = [
-        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "伊達政宗靈廟", "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" }
+        { 
+            "date": "未設定", 
+            "lat": 38.2526, 
+            "lng": 140.8739, 
+            "title": "瑞鳳殿", 
+            "note": "🚗 交通：仙台站搭乘 Loople 觀光巴士約 15 min。\n💡 簡介：仙台藩祖伊達政宗的靈廟，桃山建築風格極其絢麗。", 
+            "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" 
+        }
     ];
 
     let markerList = [];
     let currentActiveMarker = null;
 
     function getPinColor(date) {
+        if (!date || date === "未設定") return "blue";
         const uniqueDates = [...new Set(allPoints.map(p => p.date))].sort();
         const colors = ['blue', 'red', 'orange', 'violet', 'green', 'gold', 'grey', 'black'];
         return colors[uniqueDates.indexOf(date) % colors.length];
     }
 
     function createIcon(color, isBig) {
-        const size = isBig ? [45, 73] : [26, 42];
+        const size = isBig ? [45, 73] : [28, 44];
         return L.divIcon({
             className: 'custom-pin',
             html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:${size[0]}px;height:${size[1]}px;">`,
@@ -92,16 +135,15 @@
         });
     }
 
-    // 點擊針頭的核心功能
     function openDetail(index) {
         const p = allPoints[index];
         if (!p) return;
 
-        // 1. 地圖中心位移
+        // 1. 地圖中心與縮放處理
         map.panTo([p.lat, p.lng], { animate: true });
-        setTimeout(() => map.panBy([0, -150], { animate: true }), 200);
+        setTimeout(() => map.panBy([0, -180], { animate: true }), 250);
 
-        // 2. 針頭縮放切換
+        // 2. 針頭放大效果
         if (currentActiveMarker) {
             const oldIdx = markerList.indexOf(currentActiveMarker);
             if (oldIdx !== -1) {
@@ -113,62 +155,67 @@
         targetMarker.setZIndexOffset(1000);
         currentActiveMarker = targetMarker;
 
-        // 3. 彈窗內容設置
+        // 3. UI 數據填充
         document.getElementById('modal-title').innerText = p.title;
-        document.getElementById('modal-note').innerText = p.note;
-        
-        // 維基連結處理
-        const wikiLink = p.wikiUrl.replace('zh.wikipedia', 'zh.m.wikipedia').replace('ja.wikipedia', 'ja.m.wikipedia');
-        document.getElementById('info-frame').src = wikiLink;
+        // 處理 Note 中的換行符號
+        document.getElementById('modal-note').innerHTML = p.note.replace(/\n/g, '<br>');
 
-        // 4. 導航按鈕更新
+        // 維基連結 (強制轉換為行動版以減少空白機率)
+        let wikiBase = p.wikiUrl || "";
+        const finalWiki = wikiBase.replace('zh.wikipedia', 'zh.m.wikipedia').replace('ja.wikipedia', 'ja.m.wikipedia');
+        document.getElementById('info-frame').src = finalWiki;
+
+        // 4. 導航邏輯 (即使只有一個點也保持結構，但變更文字)
         const pb = document.getElementById('prev-btn'), nb = document.getElementById('next-btn');
-        if (index > 0) {
-            pb.disabled = false;
-            document.getElementById('prev-title').innerText = allPoints[index-1].title;
-            pb.onclick = () => openDetail(index - 1);
+        const pt = document.getElementById('prev-title'), nt = document.getElementById('next-title');
+
+        if (allPoints.length > 1) {
+            // 多點模式
+            if (index > 0) {
+                pb.disabled = false; pt.innerText = allPoints[index-1].title;
+                pb.onclick = () => openDetail(index - 1);
+            } else { pb.disabled = true; pt.innerText = "起點"; }
+
+            if (index < allPoints.length - 1) {
+                nb.disabled = false; nt.innerText = allPoints[index+1].title;
+                nb.onclick = () => openDetail(index + 1);
+            } else { nb.disabled = true; nt.innerText = "終點"; }
         } else {
-            pb.disabled = true;
-            document.getElementById('prev-title').innerText = "起點";
+            // 單點模式
+            pb.disabled = true; pt.innerText = "無前站";
+            nb.disabled = true; nt.innerText = "無後站";
         }
 
-        if (index < allPoints.length - 1) {
-            nb.disabled = false;
-            document.getElementById('next-title').innerText = allPoints[index+1].title;
-            nb.onclick = () => openDetail(index + 1);
-        } else {
-            nb.disabled = true;
-            document.getElementById('next-title').innerText = "終點";
-        }
-
-        // 5. 顯示彈窗
+        // 5. 打開視窗
         document.getElementById('detail-modal').showModal();
     }
 
     function closeModal() {
         document.getElementById('detail-modal').close();
+        document.getElementById('info-frame').src = "about:blank"; // 關閉時清空 iframe 節省資源
     }
 
     function renderMarkers() {
-        // 清除舊針頭
         markerList.forEach(m => map.removeLayer(m));
         markerList = [];
 
         allPoints.forEach((p, index) => {
-            const color = getPinColor(p.date);
-            const marker = L.marker([p.lat, p.lng], { icon: createIcon(color, false) });
-            
-            // 確保點擊事件被綁定
+            const marker = L.marker([p.lat, p.lng], { icon: createIcon(getPinColor(p.date), false) });
             marker.on('click', (e) => {
-                L.DomEvent.stopPropagation(e); // 防止地圖點擊事件干擾
+                L.DomEvent.stopPropagation(e);
                 openDetail(index);
             });
-
             marker.addTo(map);
             markerList.push(marker);
         });
+        
+        // 若只有一個點，自動聚焦
+        if (allPoints.length === 1) {
+            map.setView([allPoints[0].lat, allPoints[0].lng], 12);
+        }
     }
 
+    // 匯入與匯出
     function importData(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -178,24 +225,19 @@
                 allPoints = JSON.parse(e.target.result);
                 renderMarkers();
                 currentActiveMarker = null;
-            } catch (err) {
-                alert("檔案格式錯誤");
-            }
+            } catch (err) { alert("JSON 格式錯誤"); }
         };
         reader.readAsText(file);
     }
 
     function exportData() {
-        const data = JSON.stringify(allPoints, null, 2);
-        const blob = new Blob([data], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
+        const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
-        a.href = url;
-        a.download = "White6_Route.json";
+        a.href = URL.createObjectURL(blob);
+        a.download = `White6_Route_${new Date().toLocaleDateString()}.json`;
         a.click();
     }
 
-    // 初始化執行
     renderMarkers();
 </script>
 </body>
