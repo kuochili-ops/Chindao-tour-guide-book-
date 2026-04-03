@@ -3,60 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𓃥 白六快傳地圖 - 雙層導覽版</title>
+    <title>𓃥 白六快傳地圖 - 內嵌優化版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --primary-color: #2d5a27; --bg-color: #f4f4f2; --accent-blue: #007aff; }
-        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg-color); overflow: hidden; }
-        
+        :root { --primary-color: #2d5a27; --accent-blue: #007aff; }
+        body { font-family: -apple-system, sans-serif; margin: 0; background: #f4f4f2; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
 
-        /* 底部按鈕列 */
         .controls { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 10px; background: rgba(255,255,255,0.9);
             padding: 10px 20px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        /* 景點解說彈窗 */
+        /* 景點主視窗 */
         #detail-modal {
-            border: none; border-radius: 24px; padding: 0; width: 88%; max-width: 450px;
-            max-height: 70vh; box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+            border: none; border-radius: 20px; padding: 0; width: 92%; max-width: 500px;
+            height: 80vh; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             animation: slideUp 0.3s ease-out;
         }
-        #detail-modal::backdrop { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
         
         .modal-header { 
-            background: var(--primary-color); color: white; padding: 18px 24px;
+            background: var(--primary-color); color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .modal-body { padding: 24px; overflow-y: auto; background: white; }
-        .modal-close { background: none; border: none; color: white; font-size: 32px; cursor: pointer; }
+        .modal-body { 
+            height: calc(80vh - 65px); overflow-y: auto; display: flex; flex-direction: column;
+        }
 
-        /* 站點切換導航 */
-        .nav-links { display: flex; justify-content: space-between; margin-bottom: 24px; gap: 12px; }
+        /* 導航區 */
+        .nav-links { display: flex; justify-content: space-between; padding: 15px; gap: 10px; background: #fff; }
         .nav-btn { 
-            flex: 1; padding: 12px; border: 1px solid #eee; border-radius: 12px; 
-            background: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+            flex: 1; padding: 8px; border: 1px solid #eee; border-radius: 8px; 
+            background: #fff; cursor: pointer; text-align: center;
         }
         .nav-btn:disabled { opacity: 0.3; }
-        .nav-label { font-size: 11px; color: #999; margin-bottom: 2px; }
-        .nav-title { font-weight: bold; font-size: 13px; color: #333; }
 
-        /* 功能按鈕：開啟子視窗 */
-        .link-section { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-        .btn-action {
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            padding: 15px; border-radius: 14px; text-decoration: none; font-weight: bold;
-            font-size: 15px; border: 1px solid #ddd; transition: 0.2s;
+        /* 內嵌網頁區 (重點修正) */
+        .web-container { flex: 1; position: relative; border-top: 1px solid #ddd; background: #eee; }
+        .web-frame { width: 100%; height: 100%; border: none; background: white; }
+        
+        /* 覆蓋層：當 iframe 被阻擋時的提示 */
+        .frame-error {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #f9f9f9; text-align: center; padding: 20px; box-sizing: border-box;
+            z-index: -1; /* 預設在後方 */
         }
-        .btn-wiki { background: #fdfdfd; color: #333; }
-        .btn-google { background: #eef4ff; color: #1a73e8; border-color: #1a73e8; }
-        .btn-action:active { background: #eee; transform: scale(0.98); }
 
-        /* 標記針頭平滑動畫 */
         .custom-pin img { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
         @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -72,27 +68,25 @@
 
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-weight: bold; font-size: 18px;">景點詳情</span>
-        <button class="modal-close" onclick="closeModal()">×</button>
+        <span id="modal-title" style="font-weight: bold;">景點導覽</span>
+        <button style="background:none; border:none; color:white; font-size:30px; cursor:pointer;" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
         <div class="nav-links">
-            <button id="prev-btn" class="nav-btn">
-                <span class="nav-label">← 上一站</span>
-                <span id="prev-title" class="nav-title">---</span>
-            </button>
-            <button id="next-btn" class="nav-btn">
-                <span class="nav-label">下一站 →</span>
-                <span id="next-title" class="nav-title">---</span>
-            </button>
+            <button id="prev-btn" class="nav-btn"><small>← 上一站</small><div id="prev-title" style="font-weight:bold; font-size:12px;"></div></button>
+            <button id="next-btn" class="nav-btn"><small>下一站 →</small><div id="next-title" style="font-weight:bold; font-size:12px;"></div></button>
+        </div>
+        
+        <div style="padding: 0 15px 15px;">
+            <div id="modal-note" style="font-size:14px; color:#555; line-height:1.4;"></div>
         </div>
 
-        <div id="modal-date" style="font-size: 14px; color: var(--primary-color); font-weight: bold; margin-bottom: 8px;"></div>
-        <div id="modal-note" style="line-height: 1.6; color: #444; font-size: 16px; margin-bottom: 24px; border-left: 4px solid #f0f0f0; padding-left: 15px;"></div>
-
-        <div class="link-section">
-            <a href="javascript:void(0)" onclick="popInfo('wiki')" class="btn-action btn-wiki">📖 維基百科 (中尺寸開啟)</a>
-            <a href="javascript:void(0)" onclick="popInfo('google')" class="btn-action btn-google">🔍 Google 搜尋評價與照片</a>
+        <div class="web-container">
+            <div class="frame-error">
+                <p style="font-size:14px; color:#666;">此網頁限制在視窗內開啟</p>
+                <a id="fallback-link" href="#" target="_blank" style="color:var(--accent-blue); font-weight:bold; text-decoration:none;">直接點此開啟全版網頁</a>
+            </div>
+            <iframe id="info-frame" class="web-frame" src=""></iframe>
         </div>
     </div>
 </dialog>
@@ -103,15 +97,11 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let allPoints = [
-        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "🚗 下一站：仙台城跡 (約 10 min)。伊達政宗長眠處。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" },
-        { "date": "05/31", "lat": 38.2603, "lng": 140.8562, "title": "仙台城跡", "note": "🚗 明日首站：東澤玫瑰公園 (約 1 hr 10 min)。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/仙台城" },
-        { "date": "06/01", "lat": 38.4833, "lng": 140.3833, "title": "東澤玫瑰公園", "note": "🚗 下一站：中尊寺 (約 1 hr 30 min)。", "wikiUrl": "https://ja.m.wikipedia.org/wiki/東沢バラ公園" },
-        { "date": "06/01", "lat": 38.9868, "lng": 141.1141, "title": "平泉中尊寺", "note": "🚗 明日首站：嚴美溪 (約 15 min)。", "wikiUrl": "https://zh.m.wikipedia.org/wiki/中尊寺" }
+        { "date": "05/31", "lat": 38.2526, "lng": 140.8739, "title": "瑞鳳殿", "note": "伊達政宗靈廟", "wikiUrl": "https://zh.m.wikipedia.org/wiki/瑞鳳殿" }
     ];
 
     let markerList = [];
     let currentActiveMarker = null;
-    let currentData = null;
 
     function getPinColor(date) {
         const uniqueDates = [...new Set(allPoints.map(p => p.date))].sort();
@@ -120,7 +110,7 @@
     }
 
     function createIcon(color, isBig) {
-        const size = isBig ? [42, 68] : [26, 42];
+        const size = isBig ? [45, 73] : [26, 42];
         return L.divIcon({
             className: 'custom-pin',
             html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:${size[0]}px;height:${size[1]}px;">`,
@@ -128,53 +118,41 @@
         });
     }
 
-    // 核心功能：彈出中尺寸視窗
-    function popInfo(type) {
-        if (!currentData) return;
-        const url = type === 'wiki' ? currentData.wikiUrl : `https://www.google.com/search?q=${encodeURIComponent(currentData.title + ' 東北 景點')}`;
-        
-        // 設定中尺寸視窗參數
-        const w = 600, h = 750;
-        const left = (window.screen.width / 2) - (w / 2);
-        const top = (window.screen.height / 2) - (h / 2);
-        
-        // 開啟子視窗，這會讓原本的景點視窗停留在背景
-        window.open(url, 'GuideWindow', `width=${w},height=${h},top=${top},left=${left},scrollbars=yes,resizable=yes`);
-    }
-
     function openDetail(index) {
-        currentData = allPoints[index];
+        const p = allPoints[index];
         const targetMarker = markerList[index];
 
-        // 地圖聚焦
-        map.panTo([currentData.lat, currentData.lng], { animate: true });
-        setTimeout(() => map.panBy([0, -120], { animate: true }), 250);
+        map.panTo([p.lat, p.lng], { animate: true });
+        setTimeout(() => map.panBy([0, -150], { animate: true }), 250);
 
-        // 針頭放大邏輯 (持續放大直到切換下一點)
         if (currentActiveMarker && currentActiveMarker !== targetMarker) {
-            const prevIndex = markerList.indexOf(currentActiveMarker);
-            currentActiveMarker.setIcon(createIcon(getPinColor(allPoints[prevIndex].date), false));
-            currentActiveMarker.setZIndexOffset(0);
+            const prevIdx = markerList.indexOf(currentActiveMarker);
+            currentActiveMarker.setIcon(createIcon(getPinColor(allPoints[prevIdx].date), false));
         }
-        targetMarker.setIcon(createIcon(getPinColor(currentData.date), true));
+        targetMarker.setIcon(createIcon(getPinColor(p.date), true));
         targetMarker.setZIndexOffset(1000);
         currentActiveMarker = targetMarker;
 
-        // UI 填充
-        document.getElementById('modal-title').innerText = currentData.title;
-        document.getElementById('modal-date').innerText = `🗓️ ${currentData.date}`;
-        document.getElementById('modal-note').innerText = currentData.note;
+        document.getElementById('modal-title').innerText = p.title;
+        document.getElementById('modal-note').innerText = p.note;
+
+        // 解決空白問題：
+        // 1. 強制使用行動版網址 (.m.wikipedia)
+        // 2. Wikipedia 內嵌限制非常嚴，若依然空白，Fallback 提示會出現
+        const mobileWiki = p.wikiUrl.replace('zh.wikipedia', 'zh.m.wikipedia').replace('ja.wikipedia', 'ja.m.wikipedia');
+        document.getElementById('info-frame').src = mobileWiki;
+        document.getElementById('fallback-link').href = mobileWiki;
 
         const pb = document.getElementById('prev-btn'), nb = document.getElementById('next-btn');
         if (index > 0) {
             pb.disabled = false; document.getElementById('prev-title').innerText = allPoints[index-1].title;
             pb.onclick = () => openDetail(index - 1);
-        } else { pb.disabled = true; document.getElementById('prev-title').innerText = "起點"; }
+        } else { pb.disabled = true; document.getElementById('prev-title').innerText = "旅程起點"; }
         
         if (index < allPoints.length - 1) {
             nb.disabled = false; document.getElementById('next-title').innerText = allPoints[index+1].title;
             nb.onclick = () => openDetail(index + 1);
-        } else { nb.disabled = true; document.getElementById('next-title').innerText = "終點"; }
+        } else { nb.disabled = true; document.getElementById('next-title').innerText = "旅程終點"; }
 
         document.getElementById('detail-modal').showModal();
     }
@@ -191,7 +169,16 @@
         });
     }
 
-    render();
+    function importData(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            allPoints = JSON.parse(e.target.result);
+            render();
+            currentActiveMarker = null;
+        };
+        reader.readAsText(file);
+    }
 
     function exportData() {
         const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
@@ -201,17 +188,7 @@
         a.click();
     }
 
-    function importData(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            allPoints = JSON.parse(e.target.result);
-            render();
-            currentActiveMarker = null;
-        };
-        reader.readAsText(file);
-    }
+    render();
 </script>
 </body>
 </html>
