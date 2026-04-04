@@ -3,75 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>白六快傳地圖 - 透明導航版</title>
+    <title>白六快傳地圖 - 旅行創作編輯器</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #2d5a27; --accent-blue: #007aff; --warn-bg: #fffbe6; }
         body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; margin: 0; overflow: hidden; background: #f4f4f2; }
-        #map { height: 100vh; width: 100%; z-index: 1; background: #aad3df; }
+        #map { height: 100vh; width: 100%; z-index: 1; cursor: crosshair; }
 
-        /* 介面按鈕 */
+        /* 操作面板 */
         .io-controls { 
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 12px; background: rgba(255,255,255,0.9);
             padding: 10px 20px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px);
         }
-        .io-btn { padding: 8px 16px; border-radius: 20px; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .io-btn { padding: 8px 18px; border-radius: 20px; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .io-btn:active { transform: scale(0.95); }
 
         /* 導覽彈窗 */
         #detail-modal {
             border: none; border-radius: 28px; padding: 0; width: 92%; max-width: 500px;
             height: 85vh; box-shadow: 0 25px 70px rgba(0,0,0,0.5); outline: none;
         }
-        #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+        #detail-modal::backdrop { background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); }
         .modal-header { background: var(--primary-color); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .modal-body { height: calc(85vh - 60px); overflow-y: auto; background: white; display: flex; flex-direction: column; }
 
-        /* 導航控制塔 */
+        /* 編輯表單樣式 */
+        .editor-form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .editor-form input, .editor-form textarea, .editor-form select { 
+            padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box;
+        }
+        .editor-form label { font-size: 12px; color: #666; font-weight: bold; }
+
+        /* 導覽資訊樣式 */
         .nav-tower { padding: 15px; border-bottom: 1px solid #eee; }
         .nav-links { display: flex; gap: 8px; margin-bottom: 15px; }
         .nav-link-btn { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 12px; background: #fdfdfd; cursor: pointer; text-align: left; }
         .nav-link-btn span { display: block; font-size: 10px; color: #999; }
-        .nav-link-btn strong { display: block; font-size: 13px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-link-btn strong { display: block; font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* 交通看板 (含自動計算標籤) */
         .transport-dashboard {
             background: var(--warn-bg); border: 1px solid #ffe58f; border-radius: 15px;
             padding: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;
-            position: relative;
         }
         .trans-item { text-align: center; flex: 1; }
-        .trans-label { font-size: 10px; color: #856404; opacity: 0.7; display: block; }
-        .trans-value { font-size: 15px; font-weight: bold; color: #856404; }
-        .auto-calc-tag { 
-            position: absolute; top: -8px; right: 10px; background: #faad14; color: white; 
-            font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold;
-        }
+        .trans-label { font-size: 10px; color: #856404; opacity: 0.7; }
+        .trans-value { font-size: 14px; font-weight: bold; color: #856404; display: block; }
 
         .note-box { font-size: 15px; color: #444; line-height: 1.6; padding: 15px; background: #f8faf8; border-radius: 15px; border-left: 5px solid var(--primary-color); }
-        
-        /* 透明景點針樣式 */
         .transparent-pin { background: none !important; border: none !important; }
-        .transparent-pin img { 
-            filter: drop-shadow(0 3px 2px rgba(0,0,0,0.3)); 
-            transform-origin: bottom center;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .transparent-pin img { filter: drop-shadow(0 3px 2px rgba(0,0,0,0.3)); transform-origin: bottom center; }
+
+        .hint-text { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 1000; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
+<div class="hint-text">💡 提示：在地圖任意位置「點擊」即可新增個人景點</div>
 
 <div class="io-controls">
-    <button class="io-btn" style="background:var(--primary-color)" onclick="exportData()">📤 匯出 JSON</button>
+    <button class="io-btn" style="background:var(--primary-color)" onclick="exportData()">📤 匯出最新 JSON</button>
     <button class="io-btn" style="background:var(--accent-blue)" onclick="document.getElementById('fileInput').click()">📥 匯入 JSON</button>
     <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importData(event)">
 </div>
 
+<dialog id="add-modal">
+    <div class="modal-header">
+        <span>📍 新增私房景點</span>
+        <button style="background:none; border:none; color:white; font-size:30px; cursor:pointer;" onclick="this.closest('dialog').close()">×</button>
+    </div>
+    <div class="modal-body">
+        <form class="editor-form" id="new-point-form">
+            <label>日期</label>
+            <select id="f-date">
+                <option value="05/31">05/31 (Day 1)</option>
+                <option value="06/01">06/01 (Day 2)</option>
+                <option value="06/02">06/02 (Day 3)</option>
+                <option value="06/03">06/03 (Day 4)</option>
+                <option value="06/04">06/04 (Day 5)</option>
+                <option value="06/05">06/05 (Day 6)</option>
+                <option value="06/06">06/06 (Day 7)</option>
+            </select>
+            <label>景點名稱</label>
+            <input type="text" id="f-title" placeholder="例如：嚴美溪 郭公糰子" required>
+            <label>AI 搜尋關鍵字 (選填)</label>
+            <input type="text" id="f-keyword" placeholder="例如：周邊停車場、必吃心得">
+            <label>個人註解</label>
+            <textarea id="f-note" rows="3" placeholder="輸入您的心得或觀察..."></textarea>
+            <button type="submit" class="io-btn" style="background:var(--primary-color); padding: 15px; margin-top: 10px;">✅ 確認新增</button>
+        </form>
+    </div>
+</dialog>
+
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-weight:bold;">景點導覽</span>
+        <span id="modal-title">景點導覽</span>
         <button style="background:none; border:none; color:white; font-size:30px; cursor:pointer;" onclick="this.closest('dialog').close()">×</button>
     </div>
     <div class="modal-body">
@@ -80,14 +108,11 @@
                 <button id="prev-btn" class="nav-link-btn"><span>← 上一站</span><strong id="prev-title">無</strong></button>
                 <button id="next-btn" class="nav-link-btn"><span>下一站 →</span><strong id="next-title">無</strong></button>
             </div>
-
             <div id="trans-dash" class="transport-dashboard">
-                <div id="auto-tag" class="auto-calc-tag" style="display:none;">系統預估</div>
                 <div class="trans-item"><span class="trans-label">方式</span><span id="v-method" class="trans-value">🚗</span></div>
-                <div class="trans-item"><span class="trans-label">預計距離</span><span id="v-dist" class="trans-value">-- km</span></div>
-                <div class="trans-item"><span class="trans-label">所需時間</span><span id="v-time" class="trans-value">-- min</span></div>
+                <div class="trans-item"><span class="trans-label">距離</span><span id="v-dist" class="trans-value">-- km</span></div>
+                <div class="trans-item"><span class="trans-label">時間</span><span id="v-time" class="trans-value">-- min</span></div>
             </div>
-
             <div id="modal-note" class="note-box"></div>
         </div>
         <iframe id="info-frame" style="width:100%; flex:1; border:none; min-height:400px;" src=""></iframe>
@@ -96,77 +121,71 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const map = L.map('map', { zoomControl: false }).setView([38.5, 140.8], 8);
+    const map = L.map('map', { zoomControl: false }).setView([38.9, 141.0], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let allPoints = [];
     let markerList = [];
+    let tempLatLng = null;
 
-    const colorMap = {
-        "05/31": "blue", "06/01": "red", "06/02": "orange", 
-        "06/03": "violet", "06/04": "green", "06/05": "gold", "06/06": "black"
-    };
+    const colorMap = { "05/31": "blue", "06/01": "red", "06/02": "orange", "06/03": "violet", "06/04": "green", "06/05": "gold", "06/06": "black" };
 
-    // Haversine 距離計算法
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
-    }
-
-    // 建立透明底景點針
     function createIcon(color, isBig) {
         const size = isBig ? [46, 75] : [30, 48];
         return L.divIcon({
             className: 'transparent-pin',
-            html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" 
-                   style="width:${size[0]}px; height:${size[1]}px; ${isBig ? 'transform:scale(1.2);' : ''}">`,
+            html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:${size[0]}px; height:${size[1]}px;">`,
             iconSize: size, iconAnchor: [size[0]/2, size[1]]
         });
     }
 
+    // 點擊地圖新增
+    map.on('click', (e) => {
+        tempLatLng = e.latlng;
+        document.getElementById('new-point-form').reset();
+        document.getElementById('add-modal').showModal();
+    });
+
+    document.getElementById('new-point-form').onsubmit = (e) => {
+        e.preventDefault();
+        const newPoint = {
+            date: document.getElementById('f-date').value,
+            lat: tempLatLng.lat,
+            lng: tempLatLng.lng,
+            title: document.getElementById('f-title').value,
+            keyword: document.getElementById('f-keyword').value,
+            note: document.getElementById('f-note').value,
+            trans: { m: "🚗 自駕", d: "--", t: "--" } // 預設自駕
+        };
+        allPoints.push(newPoint);
+        // 按日期排序確保導航順序正確
+        allPoints.sort((a, b) => a.date.localeCompare(b.date));
+        renderMarkers();
+        document.getElementById('add-modal').close();
+    };
+
     function openDetail(index) {
         const p = allPoints[index];
-        const nextP = allPoints[index + 1];
-        const prevP = allPoints[index - 1];
-
+        const nextP = allPoints[index + 1], prevP = allPoints[index - 1];
+        
         document.getElementById('modal-title').innerText = p.title;
         document.getElementById('modal-note').innerHTML = p.note.replace(/\n/g, '<br>');
         
-        // 導航連結
-        document.getElementById('prev-title').innerText = prevP ? prevP.title : "起點";
-        document.getElementById('next-title').innerText = nextP ? nextP.title : "終點";
+        document.getElementById('prev-title').innerText = prevP ? prevP.title : "行程起點";
+        document.getElementById('next-title').innerText = nextP ? nextP.title : "行程終點";
         document.getElementById('prev-btn').onclick = () => prevP && openDetail(index - 1);
         document.getElementById('next-btn').onclick = () => nextP && openDetail(index + 1);
 
-        // 交通資訊邏輯 (重點：自動補足缺失)
-        if (nextP) {
-            document.getElementById('trans-dash').style.display = 'flex';
-            if (p.trans) {
-                document.getElementById('auto-tag').style.display = 'none';
-                document.getElementById('v-method').innerText = p.trans.m || "🚗";
-                document.getElementById('v-dist').innerText = p.trans.d || "--";
-                document.getElementById('v-time').innerText = p.trans.t || "--";
-            } else {
-                // 自動計算直線距離
-                const d = getDistance(p.lat, p.lng, nextP.lat, nextP.lng);
-                const t = Math.round((d / 40) * 60) + 10; // 假設時速 40km/h + 10min 緩衝
-                document.getElementById('auto-tag').style.display = 'block';
-                document.getElementById('v-method').innerText = "🚗 (預估)";
-                document.getElementById('v-dist').innerText = d + " km";
-                document.getElementById('v-time').innerText = t + " min";
-            }
-        } else {
-            document.getElementById('trans-dash').style.display = 'none';
-        }
+        // 交通看板
+        document.getElementById('v-method').innerText = p.trans ? p.trans.m : "🚗";
+        document.getElementById('v-dist').innerText = p.trans ? p.trans.d : "--";
+        document.getElementById('v-time').innerText = p.trans ? p.trans.t : "--";
 
-        document.getElementById('info-frame').src = `https://www.google.com/search?q=${encodeURIComponent(p.title + " 景點")}&igu=1`;
+        // AI 搜尋邏輯：如果有自訂關鍵字就搜關鍵字，否則搜景點名
+        const query = p.keyword ? p.keyword : (p.title + " 景點 介紹");
+        document.getElementById('info-frame').src = `https://www.google.com/search?q=${encodeURIComponent(query)}&igu=1`;
+        
         document.getElementById('detail-modal').showModal();
-        map.panTo([p.lat, p.lng]);
-
-        // 更新所有針頭大小
         markerList.forEach((m, i) => m.setIcon(createIcon(colorMap[allPoints[i].date] || "grey", i === index)));
     }
 
@@ -179,25 +198,24 @@
             m.addTo(map);
             markerList.push(m);
         });
-        if (markerList.length > 0) map.fitBounds(new L.featureGroup(markerList).getBounds().pad(0.3));
     }
 
     function importData(event) {
-        const file = event.target.files[0];
         const reader = new FileReader();
         reader.onload = (e) => { 
             allPoints = JSON.parse(e.target.result); 
             renderMarkers(); 
-            alert("匯入成功！");
+            if(allPoints.length > 0) map.fitBounds(new L.featureGroup(markerList).getBounds().pad(0.3));
         };
-        reader.readAsText(file);
+        reader.readAsText(event.target.files[0]);
     }
 
     function exportData() {
+        if(allPoints.length === 0) return alert("尚無景點資料");
         const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "TravelPlan_Updated.json";
+        a.download = `White6_Updated_Plan.json`;
         a.click();
     }
 </script>
