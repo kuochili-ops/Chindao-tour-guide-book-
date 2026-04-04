@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>白六快傳地圖 - 交通導航版</title>
+    <title>白六快傳地圖 - 自動估算整合版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --primary-color: #2d5a27; --accent-blue: #007aff; --bg-soft: #f8faf8; }
-        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; margin: 0; overflow: hidden; background: #eee; }
+        :root { --primary-color: #2d5a27; --accent-blue: #007aff; --warning-yellow: #fffbe6; }
+        body { font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; background: #f0f0f0; }
         #map { height: 100vh; width: 100%; z-index: 1; }
 
         /* 底部控制列 */
@@ -15,15 +15,10 @@
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; gap: 12px; background: rgba(255,255,255,0.9);
             padding: 12px 24px; border-radius: 50px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-            backdrop-filter: blur(5px);
         }
-        .btn { 
-            padding: 10px 20px; border-radius: 20px; border: none; color: white; 
-            font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s;
-        }
+        .btn { padding: 10px 20px; border-radius: 20px; border: none; color: white; font-weight: bold; cursor: pointer; }
         .btn-export { background: var(--primary-color); }
         .btn-import { background: var(--accent-blue); }
-        .btn:active { transform: scale(0.95); }
 
         /* 景點中尺寸彈窗 */
         #detail-modal {
@@ -32,40 +27,30 @@
         }
         #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
         
-        .modal-header { 
-            background: var(--primary-color); color: white; padding: 18px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .modal-body { height: calc(85vh - 65px); overflow-y: auto; display: flex; flex-direction: column; background: white; }
+        .modal-header { background: var(--primary-color); color: white; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { height: calc(85vh - 65px); overflow-y: auto; background: white; display: flex; flex-direction: column; }
 
         /* 資訊面板 */
-        .info-panel { padding: 15px; border-bottom: 1px solid #eee; }
+        .info-panel { padding: 15px; }
         .nav-grid { display: flex; gap: 10px; margin-bottom: 12px; }
-        .nav-item { 
-            flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 12px; 
-            background: #fff; text-align: center; cursor: pointer;
-        }
-        .nav-item:disabled { opacity: 0.3; cursor: not-allowed; }
+        .nav-item { flex: 1; padding: 10px; border: 1px solid #eee; border-radius: 12px; background: #fff; text-align: center; }
         .nav-label { font-size: 11px; color: #999; display: block; }
-        .nav-title { font-weight: bold; font-size: 13px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-title { font-weight: bold; font-size: 13px; color: #333; }
 
-        /* 交通條 */
-        .transport-bar {
-            display: flex; align-items: center; justify-content: space-around;
-            padding: 10px; margin-bottom: 15px; background: #fffbe6; 
-            border: 1px dashed #ffe58f; border-radius: 12px; font-size: 14px; color: #856404;
+        /* 旅程估算條 (核心更新) */
+        .estimation-bar {
+            display: flex; flex-direction: column; gap: 5px;
+            padding: 12px; margin-bottom: 15px; background: var(--warning-yellow); 
+            border: 1px solid #ffe58f; border-radius: 12px; font-size: 13px; color: #856404;
         }
+        .est-row { display: flex; justify-content: space-between; align-items: center; }
+        .est-tag { background: #faad14; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
 
-        .note-box { 
-            font-size: 15px; color: #444; line-height: 1.6; padding: 15px; 
-            background: var(--bg-soft); border-radius: 12px; border-left: 5px solid var(--primary-color);
-        }
+        .note-box { font-size: 14px; color: #444; line-height: 1.6; padding: 12px; background: #f8faf8; border-radius: 12px; border-left: 5px solid var(--primary-color); }
 
         /* 搜尋框架 */
-        .web-container { flex: 1; min-height: 450px; border-top: 1px solid #eee; position: relative; }
-        .web-frame { width: 100%; height: 100%; border: none; background: #fff; }
-
-        .custom-pin img { transition: 0.3s; }
+        .web-container { flex: 1; min-height: 450px; border-top: 1px solid #eee; }
+        .web-frame { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
@@ -73,15 +58,15 @@
 <div id="map"></div>
 
 <div class="controls">
-    <button class="btn btn-export" onclick="exportJSON()">📤 匯出行程</button>
-    <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">📥 匯入行程</button>
+    <button class="btn btn-export" onclick="exportJSON()">📤 匯出</button>
+    <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
     <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJSON(event)">
 </div>
 
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-weight: bold; font-size: 18px;">景點資訊</span>
-        <button style="background:none; border:none; color:white; font-size:32px; cursor:pointer; line-height:1;" onclick="closeModal()">×</button>
+        <span id="modal-title" style="font-weight: bold;">景點資訊</span>
+        <button style="background:none; border:none; color:white; font-size:32px; cursor:pointer;" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
         <div class="info-panel">
@@ -96,144 +81,124 @@
                 </button>
             </div>
 
-            <div id="transport-info" class="transport-bar">
-                <span id="t-method">🚗 自駕</span>
-                <span id="t-dist">--- km</span>
-                <span id="t-time">--- min</span>
+            <div id="estimation-box" class="estimation-bar">
+                <div class="est-row">
+                    <span id="est-method">🚗 交通方式：--</span>
+                    <span id="est-source" class="est-tag">系統預估</span>
+                </div>
+                <div class="est-row">
+                    <span id="est-dist">距離：-- km</span>
+                    <span id="est-time">時間：-- min</span>
+                </div>
             </div>
             
             <div id="modal-note" class="note-box"></div>
         </div>
 
         <div class="web-container">
-            <iframe id="info-frame" class="web-frame" src="about:blank"></iframe>
+            <iframe id="info-frame" class="web-frame" src=""></iframe>
         </div>
     </div>
 </dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // 1. 初始化地圖
     const map = L.map('map', { zoomControl: false }).setView([38.5, 140.8], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let allPoints = []; // 存放匯入的資料
+    let allPoints = [];
     let markerList = [];
-    let currentActiveMarker = null;
 
-    // 2. 建立圖標
-    function createIcon(color, isBig) {
-        const size = isBig ? [46, 75] : [28, 45];
-        return L.divIcon({
-            className: 'custom-pin',
-            html: `<img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png" style="width:${size[0]}px;height:${size[1]}px;">`,
-            iconSize: size, iconAnchor: [size[0]/2, size[1]]
-        });
+    // 計算兩個經緯度之間的直線距離 (Haversine formula)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // 地球半徑 (km)
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return (R * c).toFixed(1);
     }
 
-    // 3. 顯示詳情視窗
     function openDetail(index) {
         const p = allPoints[index];
-        if (!p) return;
+        const nextP = allPoints[index + 1];
 
-        // 地圖聚焦
-        map.panTo([p.lat, p.lng], { animate: true });
-        setTimeout(() => map.panBy([0, -200], { animate: true }), 250);
-
-        // 針頭放大
-        if (currentActiveMarker) {
-            const oldIdx = markerList.indexOf(currentActiveMarker);
-            currentActiveMarker.setIcon(createIcon('blue', false));
-        }
-        const targetMarker = markerList[index];
-        targetMarker.setIcon(createIcon('red', true));
-        currentActiveMarker = targetMarker;
-
-        // 填入內容
+        // 1. 基礎內容填充
         document.getElementById('modal-title').innerText = p.title;
         document.getElementById('modal-note').innerHTML = p.note.replace(/\n/g, '<br>');
 
-        // 填入交通資訊
-        if (p.trans) {
-            document.getElementById('transport-info').style.display = 'flex';
-            document.getElementById('t-method').innerText = p.trans.m || "🚗 交通";
-            document.getElementById('t-dist').innerText = "距離: " + (p.trans.d || "--");
-            document.getElementById('t-time').innerText = "時間: " + (p.trans.t || "--");
+        // 2. 旅程估算邏輯
+        if (nextP) {
+            document.getElementById('estimation-box').style.display = 'flex';
+            if (p.trans) {
+                // 如果 JSON 有給值，優先使用
+                document.getElementById('est-method').innerText = (p.trans.m || "🚗") + " 前往下一站";
+                document.getElementById('est-dist').innerText = "距離：" + (p.trans.d || "--");
+                document.getElementById('est-time').innerText = "時間：" + (p.trans.t || "--");
+                document.getElementById('est-source').innerText = "AI 規劃";
+                document.getElementById('est-source').style.background = "#52c41a";
+            } else {
+                // 自動計算直線距離並推算時間 (假設自駕平均 40km/h)
+                const dist = calculateDistance(p.lat, p.lng, nextP.lat, nextP.lng);
+                const time = Math.round((dist / 40) * 60) + 10; // 距離/時速 + 緩衝
+                document.getElementById('est-method').innerText = "🚗 前往：" + nextP.title;
+                document.getElementById('est-dist').innerText = "直線距離：約 " + dist + " km";
+                document.getElementById('est-time').innerText = "預估開車：約 " + time + " min";
+                document.getElementById('est-source').innerText = "系統預估";
+                document.getElementById('est-source').style.background = "#faad14";
+            }
         } else {
-            document.getElementById('transport-info').style.display = 'none';
+            document.getElementById('estimation-box').style.display = 'none'; // 最後一站不顯示
         }
 
-        // 導航按鈕
-        const pb = document.getElementById('prev-btn'), nb = document.getElementById('next-btn');
-        pb.disabled = (index === 0);
-        nb.disabled = (index === allPoints.length - 1);
+        // 3. 導航按鈕更新
+        document.getElementById('prev-btn').disabled = (index === 0);
+        document.getElementById('next-btn').disabled = (index === allPoints.length - 1);
         document.getElementById('prev-title').innerText = allPoints[index-1]?.title || "起點";
         document.getElementById('next-title').innerText = allPoints[index+1]?.title || "終點";
         
-        pb.onclick = () => index > 0 && openDetail(index - 1);
-        nb.onclick = () => index < allPoints.length - 1 && openDetail(index + 1);
+        document.getElementById('prev-btn').onclick = () => index > 0 && openDetail(index - 1);
+        document.getElementById('next-btn').onclick = () => index < allPoints.length - 1 && openDetail(index + 1);
 
-        // 載入 Google 搜尋 (帶入參數優化顯示)
+        // 4. Google 搜尋
         const q = encodeURIComponent(p.title + " 景點 介紹");
         document.getElementById('info-frame').src = `https://www.google.com/search?q=${q}&igu=1`;
 
         document.getElementById('detail-modal').showModal();
+        map.panTo([p.lat, p.lng]);
     }
 
-    function closeModal() {
-        document.getElementById('detail-modal').close();
-        document.getElementById('info-frame').src = "about:blank";
-    }
-
-    // 4. 渲染地圖針頭
+    // 匯入、渲染、匯出邏輯 (同前，已整合)
     function renderMarkers() {
         markerList.forEach(m => map.removeLayer(m));
         markerList = [];
-        if (allPoints.length === 0) return;
-
-        allPoints.forEach((p, index) => {
-            const m = L.marker([p.lat, p.lng], { icon: createIcon('blue', false) });
-            m.on('click', (e) => {
-                L.DomEvent.stopPropagation(e);
-                openDetail(index);
-            });
-            m.addTo(map);
+        allPoints.forEach((p, i) => {
+            const m = L.marker([p.lat, p.lng]).addTo(map).on('click', () => openDetail(i));
             markerList.push(m);
         });
-
-        // 自動縮放至所有點
-        const group = new L.featureGroup(markerList);
-        map.fitBounds(group.getBounds().pad(0.2));
+        if (allPoints.length > 0) map.fitBounds(new L.featureGroup(markerList).getBounds().pad(0.2));
     }
 
-    // 5. 匯入功能
     function importJSON(event) {
         const file = event.target.files[0];
-        if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                allPoints = JSON.parse(e.target.result);
-                renderMarkers();
-                alert("行程匯入成功！共 " + allPoints.length + " 個景點。");
-            } catch (err) {
-                alert("檔案格式錯誤，請確保是正確的 JSON。");
-            }
+        reader.onload = (e) => { 
+            allPoints = JSON.parse(e.target.result); 
+            renderMarkers(); 
         };
         reader.readAsText(file);
     }
 
-    // 6. 匯出功能
     function exportJSON() {
-        if (allPoints.length === 0) return alert("目前沒有可匯出的行程。");
         const dataStr = JSON.stringify(allPoints, null, 2);
         const blob = new Blob([dataStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = url;
-        link.download = `MyTravelPlan_${new Date().getMonth()+1}${new Date().getDate()}.json`;
-        link.click();
+        link.href = url; link.download = "TravelPlan.json"; link.click();
     }
+
+    function closeModal() { document.getElementById('detail-modal').close(); }
 </script>
 </body>
 </html>
