@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>白六快傳地圖 - 旅行全功能版</title>
+    <title>白六快傳地圖 - 旅行全攻略</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #2d5a27; --accent-blue: #007aff; }
@@ -17,7 +17,7 @@
             padding: 12px 25px; border-radius: 50px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             backdrop-filter: blur(8px);
         }
-        .btn { padding: 10px 22px; border-radius: 25px; border: none; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn { padding: 10px 22px; border-radius: 25px; border: none; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
         .btn-export { background: var(--primary-color); }
         .btn-import { background: var(--accent-blue); }
         .btn:active { transform: scale(0.92); }
@@ -29,25 +29,31 @@
         }
         #detail-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
         
-        .modal-header { background: var(--primary-color); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { height: calc(85vh - 70px); overflow-y: auto; background: white; display: flex; flex-direction: column; }
+        .modal-header { background: var(--primary-color); color: white; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { height: calc(85vh - 65px); overflow-y: auto; background: white; display: flex; flex-direction: column; }
 
         /* 資訊面板區 */
-        .info-panel { padding: 18px; border-bottom: 1px solid #eee; }
-        .date-badge { display: inline-block; padding: 4px 14px; border-radius: 15px; color: white; font-size: 12px; font-weight: bold; margin-bottom: 12px; }
+        .info-panel { padding: 18px; border-bottom: 1px solid #eee; background: #fff; }
         
-        /* 旅程估算欄位 (New) */
+        /* 日期與標題 */
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .date-badge { padding: 4px 14px; border-radius: 15px; color: white; font-size: 12px; font-weight: bold; }
+        
+        /* 旅程估算欄位 (重點更新) */
         .travel-est {
             background: #fffbe6; border: 1px solid #ffe58f; border-radius: 15px;
-            padding: 12px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 4px;
+            padding: 14px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
         }
-        .est-row { display: flex; justify-content: space-between; font-size: 13px; color: #856404; }
-        
+        .est-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #856404; }
+        .est-main { font-weight: bold; font-size: 15px; }
+
+        /* 筆記區 */
         .note-box { font-size: 15px; color: #333; line-height: 1.6; padding: 15px; background: #f9fdf9; border-radius: 15px; border-left: 6px solid var(--primary-color); }
 
-        /* Google 搜尋框 */
-        .web-container { flex: 1; min-height: 400px; }
-        .web-frame { width: 100%; height: 100%; border: none; background: #fff; }
+        /* Google AI 搜尋區 */
+        .web-container { flex: 1; min-height: 400px; background: #fff; border-top: 1px solid #eee; }
+        .web-frame { width: 100%; height: 100%; border: none; }
 
         .custom-pin img { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     </style>
@@ -64,20 +70,30 @@
 
 <dialog id="detail-modal">
     <div class="modal-header">
-        <span id="modal-title" style="font-weight: bold; font-size: 1.2rem;">景點導覽</span>
+        <span id="modal-title" style="font-weight: bold; font-size: 1.1rem;">景點導覽</span>
         <button style="background:none; border:none; color:white; font-size:35px; cursor:pointer; line-height:1;" onclick="this.closest('dialog').close()">×</button>
     </div>
     <div class="modal-body">
         <div class="info-panel">
-            <div id="modal-date-tag" class="date-badge">📅 日期</div>
+            <div class="top-row">
+                <div id="modal-date-tag" class="date-badge">日期載入中</div>
+                <div style="font-size: 12px; color: #999;">旅行計畫 / Day Note</div>
+            </div>
             
             <div id="est-box" class="travel-est">
-                <div class="est-row"><strong>🚩 交通預估</strong> <span id="est-method">🚗 自駕</span></div>
-                <div class="est-row"><span id="est-dist">距離：-- km</span> <span id="est-time">時間：-- min</span></div>
+                <div class="est-row est-main">
+                    <span id="est-method">🚗 交通方式</span>
+                    <span style="font-size: 12px; opacity: 0.8;">NEXT STOP</span>
+                </div>
+                <div class="est-row">
+                    <span id="est-dist">距離：-- km</span>
+                    <span id="est-time">預計：-- min</span>
+                </div>
             </div>
 
             <div id="modal-note" class="note-box"></div>
         </div>
+        
         <div class="web-container">
             <iframe id="info-frame" class="web-frame" src="about:blank"></iframe>
         </div>
@@ -92,7 +108,7 @@
     let allPoints = [];
     let markerList = [];
 
-    // 日期對應顏色設定 (Day 1~6)
+    // 日期顏色對應表 (根據 Day 1~Day 6 邏輯)
     const colorMap = {
         "05/31": "blue",   // Day 1
         "06/01": "red",    // Day 2
@@ -100,7 +116,7 @@
         "06/03": "violet", // Day 4
         "06/04": "green",  // Day 5
         "06/05": "gold",   // Day 6
-        "06/06": "black"   // Day 7/End
+        "06/06": "black"   // Day 7
     };
 
     function getPinColor(date) {
@@ -120,28 +136,36 @@
         const p = allPoints[index];
         const color = getPinColor(p.date);
 
-        // 1. 日期標籤換色
+        // 1. 更新日期與視覺顏色
         const dateTag = document.getElementById('modal-date-tag');
         dateTag.innerText = `📅 ${p.date}`;
         dateTag.style.backgroundColor = (color === 'gold' ? '#d4a017' : color);
 
-        // 2. 旅程估算 (從 trans 欄位讀取)
+        // 2. 呈現旅程估算 (讀取 trans 結構)
+        const estBox = document.getElementById('est-box');
         if (p.trans) {
-            document.getElementById('est-box').style.display = 'flex';
+            estBox.style.display = 'flex';
             document.getElementById('est-method').innerText = (p.trans.m || "🚗") + " 前往下一站";
             document.getElementById('est-dist').innerText = `距離：${p.trans.d || "--"}`;
             document.getElementById('est-time').innerText = `時間：${p.trans.t || "--"}`;
         } else {
-            document.getElementById('est-box').style.display = 'none';
+            estBox.style.display = 'none'; // 若無下一站資料則隱藏
         }
 
-        // 3. 基本內容與 Google 搜尋
+        // 3. 填入標題與筆記
         document.getElementById('modal-title').innerText = p.title;
         document.getElementById('modal-note').innerHTML = p.note.replace(/\n/g, '<br>');
-        document.getElementById('info-frame').src = `https://www.google.com/search?q=${encodeURIComponent(p.title + " 景點 介紹")}&igu=1`;
 
+        // 4. 載入 Google 搜尋內容 (AI 預估模式)
+        const searchQuery = encodeURIComponent(p.title + " 景點 介紹");
+        document.getElementById('info-frame').src = `https://www.google.com/search?q=${searchQuery}&igu=1`;
+
+        // 5. 視窗與地圖連動
         document.getElementById('detail-modal').showModal();
-        map.panTo([p.lat, p.lng]);
+        map.panTo([p.lat, p.lng], { animate: true });
+        
+        // 放大當前針頭
+        markerList.forEach((m, i) => m.setIcon(createIcon(getPinColor(allPoints[i].date), i === index)));
     }
 
     function renderMarkers() {
@@ -159,11 +183,11 @@
         });
         if (markerList.length > 0) {
             const group = new L.featureGroup(markerList);
-            map.fitBounds(group.getBounds().pad(0.2));
+            map.fitBounds(group.getBounds().pad(0.3));
         }
     }
 
-    // 匯入 JSON
+    // 匯入與匯出
     function importData(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -172,18 +196,18 @@
             try {
                 allPoints = JSON.parse(e.target.result);
                 renderMarkers();
-            } catch (err) { alert("JSON 格式錯誤"); }
+            } catch (err) { alert("JSON 格式不正確"); }
         };
         reader.readAsText(file);
     }
 
-    // 匯出 JSON
     function exportData() {
-        if (allPoints.length === 0) return alert("沒有資料可匯出");
+        if (allPoints.length === 0) return alert("目前無資料可匯出");
         const blob = new Blob([JSON.stringify(allPoints, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `White6_TravelPlan_${new Date().toLocaleDateString()}.json`;
+        a.href = url;
+        a.download = `White6_TravelPlan.json`;
         a.click();
     }
 </script>
